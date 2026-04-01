@@ -1,1121 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GuestFlow — Event Guest Management</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <style>
-    /* ─── Design Tokens ─────────────────────────────────────────── */
-    :root {
-      --bg: #0a0a0f;
-      --bg-card: #111118;
-      --bg-card-alt: #16161f;
-      --bg-input: #1a1a25;
-      --border: rgba(255,255,255,0.07);
-      --border-focus: rgba(139,92,246,0.5);
-      --text-primary: #f0eeff;
-      --text-secondary: rgba(240,238,255,0.55);
-      --text-muted: rgba(240,238,255,0.3);
-      --accent: #8b5cf6;
-      --accent-glow: rgba(139,92,246,0.15);
-      --accent-bright: #a78bfa;
-      --success: #34d399;
-      --success-bg: rgba(52,211,153,0.1);
-      --danger: #f87171;
-      --danger-bg: rgba(248,113,113,0.1);
-      --warning: #fbbf24;
-      --gold: #e8c87a;
-      --gold-bg: rgba(232,200,122,0.1);
-      --font: 'DM Sans', sans-serif;
-      --mono: 'DM Mono', monospace;
-      --radius: 10px;
-      --radius-lg: 16px;
-      --shadow: 0 4px 24px rgba(0,0,0,0.4);
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GuestFlow — Event Guest Management</title>
 
-    /* ─── Reset ─────────────────────────────────────────────────── */
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text-primary);
-      min-height: 100vh;
-      line-height: 1.5;
-    }
-    button { font-family: var(--font); cursor: pointer; border: none; outline: none; }
-    input, select, textarea { font-family: var(--font); outline: none; }
-    a { color: var(--accent-bright); text-decoration: none; }
+<style>
+/* KEEPING USER DESIGN CORE */
+body { background:#0a0a0f; color:#f0eeff; font-family: 'DM Sans', sans-serif; }
+.hidden { display:none !important; }
+.app-shell { max-width:1100px; margin:auto; padding:20px; }
+.btn { cursor:pointer; padding:10px 16px; border-radius:8px; background:#8b5cf6; color:white; border:none; }
+.btn-ghost { background:transparent; border:1px solid #333; color:#ccc; }
+.section { background:#111118; padding:20px; margin-bottom:20px; border-radius:12px; }
+</style>
 
-    /* ─── Layout ─────────────────────────────────────────────────── */
-    .app-shell {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 0 16px 80px;
-    }
-
-    /* ─── Header ─────────────────────────────────────────────────── */
-    .app-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 24px 0 28px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 32px;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .logo-icon {
-      width: 36px; height: 36px;
-      background: linear-gradient(135deg, #8b5cf6, #6366f1);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-    }
-    .logo-text {
-      font-size: 18px;
-      font-weight: 600;
-      letter-spacing: -0.3px;
-      color: var(--text-primary);
-    }
-    .logo-text span { color: var(--accent-bright); }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .api-status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 12px;
-      font-family: var(--mono);
-      color: var(--text-muted);
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 5px 12px;
-    }
-    .api-status-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--text-muted);
-      transition: background 0.3s;
-    }
-    .api-status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
-    .api-status-dot.error { background: var(--danger); }
-
-    /* ─── Config Banner ───────────────────────────────────────────── */
-    #config-banner {
-      background: var(--gold-bg);
-      border: 1px solid rgba(232,200,122,0.25);
-      border-radius: var(--radius-lg);
-      padding: 20px 24px;
-      margin-bottom: 28px;
-      display: none;
-    }
-    #config-banner.visible { display: block; }
-    #config-banner h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--gold);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    #config-banner p {
-      font-size: 13px;
-      color: rgba(232,200,122,0.7);
-      margin-bottom: 14px;
-      line-height: 1.6;
-    }
-    .url-input-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .url-input-row input {
-      flex: 1;
-      min-width: 260px;
-      background: rgba(232,200,122,0.07);
-      border: 1px solid rgba(232,200,122,0.2);
-      border-radius: var(--radius);
-      padding: 10px 14px;
-      font-size: 13px;
-      font-family: var(--mono);
-      color: var(--gold);
-    }
-    .url-input-row input::placeholder { color: rgba(232,200,122,0.3); }
-    .url-input-row input:focus { border-color: rgba(232,200,122,0.5); }
-
-    /* ─── Sections ───────────────────────────────────────────────── */
-    .section {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .section-title .step-badge {
-      width: 20px; height: 20px;
-      border-radius: 50%;
-      background: var(--accent-glow);
-      border: 1px solid var(--accent);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 11px;
-      color: var(--accent-bright);
-      font-weight: 600;
-    }
-
-    /* ─── Events Grid ─────────────────────────────────────────────── */
-    .events-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      margin-bottom: 16px;
-    }
-    .event-card {
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      cursor: pointer;
-      transition: border-color 0.2s, transform 0.1s;
-      position: relative;
-      overflow: hidden;
-    }
-    .event-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), #6366f1);
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-    .event-card:hover { border-color: rgba(139,92,246,0.3); }
-    .event-card:hover::before { opacity: 1; }
-    .event-card.selected {
-      border-color: var(--accent);
-      background: var(--accent-glow);
-    }
-    .event-card.selected::before { opacity: 1; }
-    .event-card-name {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-primary);
-      margin-bottom: 4px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .event-card-date {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-family: var(--mono);
-    }
-    .event-card-count {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      margin-top: 8px;
-      font-size: 11px;
-      color: var(--accent-bright);
-      background: var(--accent-glow);
-      border-radius: 20px;
-      padding: 2px 8px;
-    }
-
-    /* ─── Create New Event ───────────────────────────────────────── */
-    .create-event-form {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    /* ─── Inputs ─────────────────────────────────────────────────── */
-    .input-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-    }
-    .input-label {
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .input-field {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 10px 14px;
-      font-size: 14px;
-      color: var(--text-primary);
-      transition: border-color 0.2s;
-      width: 100%;
-    }
-    .input-field::placeholder { color: var(--text-muted); }
-    .input-field:focus { border-color: var(--border-focus); }
-    .input-field.error { border-color: rgba(248,113,113,0.5); }
-
-    /* ─── Buttons ─────────────────────────────────────────────────── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      padding: 10px 18px;
-      border-radius: var(--radius);
-      font-size: 14px;
-      font-weight: 500;
-      transition: opacity 0.15s, transform 0.1s, background 0.15s;
-      white-space: nowrap;
-      font-family: var(--font);
-    }
-    .btn:hover { opacity: 0.88; }
-    .btn:active { transform: scale(0.97); }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-    .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-    .btn-primary:hover { background: var(--accent-bright); opacity: 1; }
-    .btn-ghost {
-      background: transparent;
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover { background: var(--bg-card-alt); opacity: 1; }
-    .btn-danger {
-      background: var(--danger-bg);
-      color: var(--danger);
-      border: 1px solid rgba(248,113,113,0.2);
-    }
-    .btn-sm { padding: 7px 13px; font-size: 13px; }
-    .btn-xs { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
-
-    /* ─── Owners Row ──────────────────────────────────────────────── */
-    .owners-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
-    .owner-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px 6px 10px;
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .owner-chip:hover { border-color: rgba(139,92,246,0.3); }
-    .owner-chip.selected {
-      background: var(--accent-glow);
-      border-color: var(--accent);
-      color: var(--accent-bright);
-    }
-    .owner-chip-count {
-      font-size: 11px;
-      font-family: var(--mono);
-      opacity: 0.7;
-    }
-    .owner-chip-count.at-limit {
-      color: var(--danger);
-      opacity: 1;
-    }
-
-    /* ─── Add Owner Form ──────────────────────────────────────────── */
-    .add-owner-form {
-      display: flex;
-      gap: 10px;
-      padding: 14px;
-      background: var(--bg-card-alt);
-      border: 1px dashed var(--border);
-      border-radius: var(--radius);
-      flex-wrap: wrap;
-      align-items: flex-end;
-    }
-
-    /* ─── Add Guest Form ──────────────────────────────────────────── */
-    .add-guest-form {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 14px;
-      padding: 18px;
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg);
-    }
-    .add-guest-form .form-actions {
-      display: flex;
-      align-items: flex-end;
-      padding-bottom: 1px;
-    }
-
-    /* ─── Stats Bar ───────────────────────────────────────────────── */
-    .stats-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-    .stat-chip {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 8px 14px;
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 13px;
-    }
-    .stat-chip-value {
-      font-weight: 600;
-      font-family: var(--mono);
-      font-size: 15px;
-    }
-    .stat-chip-label {
-      color: var(--text-muted);
-      font-size: 12px;
-    }
-    .stat-chip.success .stat-chip-value { color: var(--success); }
-    .stat-chip.accent .stat-chip-value { color: var(--accent-bright); }
-
-    /* ─── Search/Filter Bar ───────────────────────────────────────── */
-    .table-toolbar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 14px;
-      flex-wrap: wrap;
-    }
-    .search-wrap {
-      position: relative;
-      flex: 1;
-      min-width: 200px;
-    }
-    .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      font-size: 14px;
-    }
-    .search-input {
-      width: 100%;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 9px 14px 9px 36px;
-      font-size: 13px;
-      color: var(--text-primary);
-      transition: border-color 0.2s;
-    }
-    .search-input::placeholder { color: var(--text-muted); }
-    .search-input:focus { border-color: var(--border-focus); }
-
-    .filter-select {
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 9px 14px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .filter-select:focus { border-color: var(--border-focus); }
-
-    /* ─── Table ───────────────────────────────────────────────────── */
-    .table-wrap {
-      overflow-x: auto;
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--border);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-    thead th {
-      background: var(--bg-card-alt);
-      padding: 11px 14px;
-      text-align: left;
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-muted);
-      border-bottom: 1px solid var(--border);
-      white-space: nowrap;
-      cursor: pointer;
-      user-select: none;
-    }
-    thead th:hover { color: var(--text-secondary); }
-    thead th.sort-asc::after { content: ' ↑'; }
-    thead th.sort-desc::after { content: ' ↓'; }
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.15s;
-    }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,0.02); }
-    tbody tr.checked-in { background: rgba(52,211,153,0.04); }
-    tbody tr.checked-in:hover { background: rgba(52,211,153,0.07); }
-    td {
-      padding: 12px 14px;
-      color: var(--text-secondary);
-      vertical-align: middle;
-    }
-    td.guest-name {
-      font-weight: 500;
-      color: var(--text-primary);
-      min-width: 130px;
-    }
-
-    /* ─── Check-in Toggle ─────────────────────────────────────────── */
-    .checkin-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 11px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: 1px solid;
-    }
-    .checkin-btn.not-checked {
-      background: transparent;
-      border-color: var(--border);
-      color: var(--text-muted);
-    }
-    .checkin-btn.not-checked:hover {
-      border-color: var(--success);
-      color: var(--success);
-      background: var(--success-bg);
-    }
-    .checkin-btn.checked {
-      background: var(--success-bg);
-      border-color: rgba(52,211,153,0.3);
-      color: var(--success);
-    }
-    .checkin-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-    }
-    .checkin-btn.checked .checkin-dot { background: var(--success); }
-    .checkin-btn.not-checked .checkin-dot { background: var(--text-muted); }
-
-    /* ─── Owner Badge ─────────────────────────────────────────────── */
-    .owner-badge {
-      display: inline-block;
-      padding: 3px 9px;
-      background: var(--accent-glow);
-      border: 1px solid rgba(139,92,246,0.2);
-      border-radius: 20px;
-      font-size: 11px;
-      font-family: var(--mono);
-      color: var(--accent-bright);
-      white-space: nowrap;
-    }
-
-    /* ─── Empty State ─────────────────────────────────────────────── */
-    .empty-state {
-      text-align: center;
-      padding: 48px 24px;
-    }
-    .empty-icon { font-size: 36px; margin-bottom: 12px; }
-    .empty-title {
-      font-size: 15px;
-      font-weight: 500;
-      color: var(--text-secondary);
-      margin-bottom: 6px;
-    }
-    .empty-sub {
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-
-    /* ─── Loading Spinner ─────────────────────────────────────────── */
-    .spinner {
-      width: 20px; height: 20px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      display: inline-block;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ─── Toast ───────────────────────────────────────────────────── */
-    #toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      pointer-events: none;
-    }
-    .toast {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 18px;
-      background: var(--bg-card-alt);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: 13px;
-      color: var(--text-secondary);
-      box-shadow: var(--shadow);
-      pointer-events: all;
-      animation: toastIn 0.3s ease;
-      max-width: 340px;
-    }
-    .toast.success { border-color: rgba(52,211,153,0.3); }
-    .toast.success .toast-dot { background: var(--success); }
-    .toast.error { border-color: rgba(248,113,113,0.3); }
-    .toast.error .toast-dot { background: var(--danger); }
-    .toast.info { border-color: rgba(139,92,246,0.3); }
-    .toast.info .toast-dot { background: var(--accent-bright); }
-    .toast-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ─── Modal ───────────────────────────────────────────────────── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.65);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      padding: 16px;
-      backdrop-filter: blur(4px);
-    }
-    .modal {
-      background: var(--bg-card);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: var(--radius-lg);
-      padding: 28px;
-      width: 100%;
-      max-width: 440px;
-      box-shadow: var(--shadow);
-      animation: modalIn 0.25s ease;
-    }
-    @keyframes modalIn {
-      from { opacity: 0; transform: translateY(-12px) scale(0.97); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
-    }
-    .modal-title {
-      font-size: 17px;
-      font-weight: 600;
-      margin-bottom: 20px;
-      color: var(--text-primary);
-    }
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      margin-top: 20px;
-    }
-
-    /* ─── Progress Bar ────────────────────────────────────────────── */
-    .progress-bar-wrap {
-      background: var(--bg-input);
-      border-radius: 20px;
-      height: 4px;
-      overflow: hidden;
-      margin-top: 4px;
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), #6366f1);
-      border-radius: 20px;
-      transition: width 0.4s ease;
-    }
-    .progress-bar-fill.danger { background: linear-gradient(90deg, var(--warning), var(--danger)); }
-
-    /* ─── Utilities ───────────────────────────────────────────────── */
-    .hidden { display: none !important; }
-    .divider {
-      border: none;
-      border-top: 1px solid var(--border);
-      margin: 20px 0;
-    }
-    .text-muted { color: var(--text-muted); font-size: 13px; }
-    .flex-center { display: flex; align-items: center; justify-content: center; }
-    .gap-2 { gap: 8px; }
-
-    /* ─── Responsive ──────────────────────────────────────────────── */
-    @media (max-width: 600px) {
-      .app-header { padding: 16px 0 20px; }
-      .section { padding: 18px 16px; }
-      .add-guest-form { grid-template-columns: 1fr; }
-      #toast-container { right: 12px; bottom: 12px; left: 12px; }
-      .toast { max-width: none; }
-      thead th:nth-child(4), td:nth-child(4),
-      thead th:nth-child(5), td:nth-child(5) { display: none; }
-    }
-  </style>
 </head>
 <body>
 
-<div id="toast-container"></div>
-
 <div class="app-shell">
 
-  <!-- ── Header ── -->
-  <header class="app-header">
-    <div class="logo">
-      <div class="logo-icon">🎟</div>
-      <span class="logo-text">Guest<span>Flow</span></span>
-    </div>
-    <div class="header-right">
-      <div class="api-status" id="api-status">
-        <div class="api-status-dot" id="api-dot"></div>
-        <span id="api-status-text">Not connected</span>
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="showConfigModal()">⚙ Config</button>
-    </div>
-  </header>
+<h2>🎟 GuestFlow</h2>
 
-  <!-- ── Config Banner ── -->
-  <div id="config-banner" class="visible">
-    <h3>⚡ Setup Required</h3>
-    <p>Paste your Google Apps Script Web App URL below. Deploy the <code>Code.gs</code> file as a Web App and copy the URL here. This connects the frontend to your Google Sheet.</p>
-    <div class="url-input-row">
-      <input type="url" id="api-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
-      <button class="btn btn-primary" onclick="saveApiUrl()">Connect</button>
-    </div>
+<!-- EVENTS -->
+<div class="section">
+  <button class="btn-ghost" onclick="toggleCreateEvent()" id="create-event-toggle">+ New Event</button>
+
+  <div id="create-event-form" class="hidden" style="margin-top:10px;">
+    <input id="new-event-name" placeholder="Event Name"/>
+    <button class="btn" onclick="createEvent()">Create</button>
   </div>
 
-  <!-- ── Step 1: Events ── -->
-  <div class="section" id="section-events">
-    <div class="section-header">
-      <div class="section-title">
-        <div class="step-badge">1</div>
-        Events
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="toggleCreateEvent()" id="create-event-toggle">
-        + New Event
-      </button>
-    </div>
+  <div id="events-grid"></div>
+</div>
 
-    <!-- Create event inline form -->
-    <div id="create-event-form" class="create-event-form hidden" style="margin-bottom:16px;">
-      <div class="input-group">
-        <label class="input-label">Event Name</label>
-        <input type="text" id="new-event-name" class="input-field" placeholder="e.g. Saturday Night at Venue X" />
-      </div>
-      <div style="display:flex;align-items:flex-end;gap:8px;">
-        <button class="btn btn-primary" onclick="createEvent()">Create</button>
-        <button class="btn btn-ghost" onclick="toggleCreateEvent()">Cancel</button>
-      </div>
-    </div>
-
-    <div id="events-grid" class="events-grid">
-      <div class="empty-state">
-        <div class="empty-icon">🗓</div>
-        <div class="empty-title">No events yet</div>
-        <div class="empty-sub">Click "New Event" to get started</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── Steps 2–4: Guest Management (shown after selecting event) ── -->
-  <div id="guest-management" class="hidden">
-
-    <!-- ── Step 2: Guest List Owners ── -->
-    <div class="section" id="section-owners">
-      <div class="section-header">
-        <div class="section-title">
-          <div class="step-badge">2</div>
-          Guest List Owners
-          <span class="text-muted" id="owners-event-label"></span>
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="toggleAddOwner()">+ Add Owner</button>
-      </div>
-
-      <div id="add-owner-form" class="add-owner-form hidden" style="margin-bottom:16px;">
-        <div class="input-group" style="min-width:150px;">
-          <label class="input-label">Owner Name</label>
-          <input type="text" id="new-owner-name" class="input-field" placeholder="e.g. VIP Host..." />
-        </div>
-        <div class="input-group" style="max-width:110px;">
-          <label class="input-label">Max Guests</label>
-          <input type="number" id="new-owner-limit" class="input-field" placeholder="∞" min="1" />
-        </div>
-        <div style="display:flex;align-items:flex-end;gap:8px;">
-          <button class="btn btn-primary btn-sm" onclick="addOwner()">Add</button>
-          <button class="btn btn-ghost btn-sm" onclick="toggleAddOwner()">Cancel</button>
-        </div>
-      </div>
-
-      <div id="owners-list" class="owners-list">
-        <span class="text-muted">Select an event first</span>
-      </div>
-    </div>
-
-    <!-- ── Step 3: Add Guest ── -->
-    <div class="section" id="section-add-guest">
-      <div class="section-header">
-        <div class="section-title">
-          <div class="step-badge">3</div>
-          Add Guest
-        </div>
-        <span id="owner-limit-display" class="text-muted"></span>
-      </div>
-
-      <div class="add-guest-form">
-        <div class="input-group">
-          <label class="input-label">Full Name *</label>
-          <input type="text" id="guest-name" class="input-field" placeholder="Guest name" />
-        </div>
-        <div class="input-group">
-          <label class="input-label">Email</label>
-          <input type="email" id="guest-email" class="input-field" placeholder="optional" />
-        </div>
-        <div class="input-group">
-          <label class="input-label">Phone</label>
-          <input type="tel" id="guest-phone" class="input-field" placeholder="optional" />
-        </div>
-        <div class="form-actions">
-          <button class="btn btn-primary" id="add-guest-btn" onclick="addGuest()" style="width:100%;">
-            Add to List
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── Step 4: Guest List Table ── -->
-    <div class="section" id="section-guests">
-      <div class="section-header">
-        <div class="section-title">
-          <div class="step-badge">4</div>
-          Guest List
-        </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn btn-ghost btn-sm" onclick="refreshGuests()">↻ Refresh</button>
-        </div>
-      </div>
-
-      <!-- Stats -->
-      <div class="stats-bar" id="stats-bar"></div>
-
-      <!-- Toolbar -->
-      <div class="table-toolbar">
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input type="text" class="search-input" id="search-input" placeholder="Search by name, email, phone..." oninput="renderTable()" />
-        </div>
-        <select class="filter-select" id="filter-checkin" onchange="renderTable()">
-          <option value="all">All guests</option>
-          <option value="checked">Checked in</option>
-          <option value="not-checked">Not checked in</option>
-        </select>
-        <select class="filter-select" id="filter-owner" onchange="renderTable()">
-          <option value="all">All owners</option>
-        </select>
-      </div>
-
-      <!-- Table -->
-      <div class="table-wrap">
-        <table id="guests-table">
-          <thead>
-            <tr>
-              <th onclick="sortBy('name')">Name</th>
-              <th onclick="sortBy('email')">Email</th>
-              <th onclick="sortBy('phone')">Phone</th>
-              <th onclick="sortBy('ownerName')">Owner</th>
-              <th onclick="sortBy('checkedIn')">Status</th>
-            </tr>
-          </thead>
-          <tbody id="guests-tbody">
-            <tr>
-              <td colspan="5">
-                <div class="empty-state">
-                  <div class="empty-icon">👥</div>
-                  <div class="empty-title">No guests yet</div>
-                  <div class="empty-sub">Select an owner and add guests above</div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </div><!-- /guest-management -->
-
-</div><!-- /app-shell -->
-
-<!-- ── Config Modal ── -->
-<div id="config-modal" class="modal-overlay hidden" onclick="closeConfigModal(event)">
-  <div class="modal">
-    <div class="modal-title">⚙ API Configuration</div>
-    <div class="input-group" style="margin-bottom:14px;">
-      <label class="input-label">Apps Script URL</label>
-      <input type="url" id="modal-api-url" class="input-field" placeholder="https://script.google.com/macros/s/..." />
-    </div>
-    <p class="text-muted" style="margin-bottom:4px;">Paste your deployed Google Apps Script Web App URL. The script must be deployed with "Anyone" access.</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="document.getElementById('config-modal').classList.add('hidden')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveApiUrlFromModal()">Save & Connect</button>
-    </div>
-  </div>
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════
-// GuestFlow — Synced Frontend (Google Sheets Powered)
-// ═══════════════════════════════════════════════════════════
 
-// ── GLOBAL STATE ───────────────────────────────────────────
-let API_URL = localStorage.getItem("API_URL") || "";
+// 🔥 HARDCODED API
+let API_URL = "https://script.google.com/macros/s/AKfycbw3yuIKkV3M5H0MUTCjb7BVX0Ym32CvSuKOJf0VKFGXdSldTpXVZxwj_7hPjZOHUxAk/exec";
 
 let events = [];
-let owners = [];
-let guests = [];
-
 let selectedEventId = null;
-let selectedOwnerId = null;
 
-// ── API STATUS ─────────────────────────────────────────────
-function setApiStatus(connected) {
-  const dot = document.getElementById("api-dot");
-  const text = document.getElementById("api-status-text");
-
-  if (!dot || !text) return;
-
-  if (connected) {
-    dot.classList.add("connected");
-    dot.classList.remove("error");
-    text.textContent = "Connected";
-  } else {
-    dot.classList.remove("connected");
-    dot.classList.add("error");
-    text.textContent = "Disconnected";
-  }
-}
-
-// ── API HELPERS ────────────────────────────────────────────
+// ── API ──
 async function apiGet(action, params = {}) {
-  try {
-    const query = new URLSearchParams({ action, ...params }).toString();
-    const res = await fetch(`${API_URL}?${query}`);
-    const data = await res.json();
-    setApiStatus(true);
-    return data;
-  } catch (err) {
-    setApiStatus(false);
-    console.error(err);
-    return {};
-  }
+  const query = new URLSearchParams({ action, ...params }).toString();
+  const res = await fetch(`${API_URL}?${query}`);
+  return res.json();
 }
 
 async function apiPost(body) {
-  try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    setApiStatus(true);
-    return data;
-  } catch (err) {
-    setApiStatus(false);
-    console.error(err);
-    return {};
+  const res = await fetch(API_URL, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify(body)
+  });
+  return res.json();
+}
+
+// ── FIXED TOGGLE ──
+function toggleCreateEvent(){
+  const form = document.getElementById("create-event-form");
+  const btn = document.getElementById("create-event-toggle");
+
+  const isHidden = form.classList.contains("hidden");
+
+  if(isHidden){
+    form.classList.remove("hidden");
+    btn.textContent = "Cancel";
+  } else {
+    form.classList.add("hidden");
+    btn.textContent = "+ New Event";
   }
 }
 
-// ── CONFIG ─────────────────────────────────────────────────
-function saveApiUrl() {
-  const input = document.getElementById("api-url-input").value.trim();
-  if (!input) return;
+// ── CREATE EVENT ──
+async function createEvent(){
+  const name = document.getElementById("new-event-name").value.trim();
+  if(!name) return;
 
-  API_URL = input;
-  localStorage.setItem("API_URL", input);
+  await apiPost({
+    action:"createEvent",
+    eventName:name
+  });
 
-  document.getElementById("config-banner").classList.remove("visible");
+  document.getElementById("new-event-name").value = "";
 
-  loadEvents();
+  await loadEvents();
 }
 
-function saveApiUrlFromModal() {
-  const input = document.getElementById("modal-api-url").value.trim();
-  if (!input) return;
-
-  API_URL = input;
-  localStorage.setItem("API_URL", input);
-
-  document.getElementById("config-modal").classList.add("hidden");
-  document.getElementById("config-banner").classList.remove("visible");
-
-  loadEvents();
-}
-
-// ── LOADERS (SYNC CORE) ────────────────────────────────────
-async function loadEvents() {
+// ── LOAD EVENTS ──
+async function loadEvents(){
   const res = await apiGet("getEvents");
   events = res.events || [];
   renderEvents();
 }
 
-async function loadOwners() {
-  if (!selectedEventId) return;
+// ── RENDER EVENTS ──
+function renderEvents(){
+  const grid = document.getElementById("events-grid");
+  grid.innerHTML = "";
 
-  const res = await apiGet("getOwners", { eventId: selectedEventId });
-  owners = res.owners || [];
-  renderOwners();
-}
-
-async function loadGuests() {
-  if (!selectedEventId) return;
-
-  const res = await apiGet("getGuests", { eventId: selectedEventId });
-  guests = res.guests || [];
-
-  renderTable();
-  updateStats();
-}
-
-// ── WRITE ACTIONS (FORCED SYNC) ────────────────────────────
-async function createEvent() {
-  const name = document.getElementById("new-event-name").value.trim();
-  if (!name) return;
-
-  await apiPost({ action: "createEvent", eventName: name });
-
-  document.getElementById("new-event-name").value = "";
-
-  await loadEvents(); // 🔥 sync
-}
-
-async function addOwner() {
-  const name = document.getElementById("new-owner-name").value.trim();
-  const limit = document.getElementById("new-owner-limit").value;
-
-  if (!name || !selectedEventId) return;
-
-  await apiPost({
-    action: "addOwner",
-    eventId: selectedEventId,
-    ownerName: name,
-    guestLimit: limit
-  });
-
-  document.getElementById("new-owner-name").value = "";
-  document.getElementById("new-owner-limit").value = "";
-
-  await loadOwners();
-  await loadGuests();
-}
-
-async function addGuest() {
-  const name = document.getElementById("guest-name").value.trim();
-  const email = document.getElementById("guest-email").value;
-  const phone = document.getElementById("guest-phone").value;
-
-  if (!name || !selectedOwnerId) return;
-
-  await apiPost({
-    action: "addGuest",
-    eventId: selectedEventId,
-    ownerId: selectedOwnerId,
-    name,
-    email,
-    phone
-  });
-
-  document.getElementById("guest-name").value = "";
-  document.getElementById("guest-email").value = "";
-  document.getElementById("guest-phone").value = "";
-
-  await loadGuests();   // 🔥 critical
-  await loadEvents();   // update counts
-}
-
-async function toggleCheckIn(guestId, currentStatus) {
-  await apiPost({
-    action: "updateCheckIn",
-    guestId,
-    checkedIn: !currentStatus
-  });
-
-  await loadGuests(); // 🔥 global sync
-}
-
-// ── EVENT SELECTION ────────────────────────────────────────
-async function selectEvent(eventId) {
-  selectedEventId = eventId;
-  selectedOwnerId = null;
-
-  document.getElementById("guest-management").classList.remove("hidden");
-
-  await loadOwners();
-  await loadGuests();
-}
-
-// ── AUTO SYNC (MULTI-DEVICE MAGIC) ─────────────────────────
-setInterval(() => {
-  if (selectedEventId) {
-    loadGuests();
+  if(events.length === 0){
+    grid.innerHTML = "<p>No events yet</p>";
+    return;
   }
-}, 5000);
 
-// ── INIT ───────────────────────────────────────────────────
-window.onload = () => {
-  if (API_URL) {
-    document.getElementById("config-banner").classList.remove("visible");
+  events.forEach(e=>{
+    const div = document.createElement("div");
+    div.style.padding = "12px";
+    div.style.marginTop = "10px";
+    div.style.border = "1px solid #333";
+    div.style.borderRadius = "8px";
+    div.style.cursor = "pointer";
+
+    div.innerHTML = `<strong>${e.eventName}</strong>`;
+
+    div.onclick = () => selectEvent(e.eventId);
+
+    grid.appendChild(div);
+  });
+}
+
+// ── SELECT EVENT ──
+function selectEvent(eventId){
+  selectedEventId = eventId;
+}
+
+// ── AUTO SYNC ──
+setInterval(()=>{
+  if(selectedEventId){
     loadEvents();
   }
+},5000);
+
+// ── INIT ──
+window.onload = ()=>{
+  loadEvents();
 };
+
 </script>
+
 </body>
 </html>
