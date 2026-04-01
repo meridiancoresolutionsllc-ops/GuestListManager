@@ -911,476 +911,211 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════
-// GuestFlow — Frontend App
+// GuestFlow — Synced Frontend (Google Sheets Powered)
 // ═══════════════════════════════════════════════════════════
 
-// ── State ──────────────────────────────────────────────────
-const state = {
-  apiUrl: '',
-  events: [],
-  selectedEvent: null,
-  owners: [],
-  selectedOwner: null,
-  guests: [],
-  sortKey: 'name',
-  sortDir: 1,
-};
+// ── GLOBAL STATE ───────────────────────────────────────────
+let API_URL = localStorage.getItem("API_URL") || "";
 
-// ── Init ───────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('gf_api_url');
-  if (saved) {
-    state.apiUrl = saved;
-    document.getElementById('api-url-input').value = saved;
-    document.getElementById('modal-api-url').value = saved;
-    document.getElementById('config-banner').classList.remove('visible');
-    testConnection().then(() => loadEvents());
-  }
-});
+let events = [];
+let owners = [];
+let guests = [];
 
-// ── API Layer ──────────────────────────────────────────────
-async function api(action, params = {}) {
-  if (!state.apiUrl) {
-    toast('Please configure your API URL first', 'error');
-    return null;
-  }
-  const url = new URL(state.apiUrl);
-  url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  try {
-    const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
-  } catch (e) {
-    console.error('API error:', e);
-    toast(`API error: ${e.message}`, 'error');
-    return null;
-  }
-}
+let selectedEventId = null;
+let selectedOwnerId = null;
 
-async function apiPost(action, body = {}) {
-  if (!state.apiUrl) {
-    toast('Please configure your API URL first', 'error');
-    return null;
-  }
-  try {
-    const res = await fetch(state.apiUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...body }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
-  } catch (e) {
-    console.error('API error:', e);
-    toast(`API error: ${e.message}`, 'error');
-    return null;
-  }
-}
+// ── API STATUS ─────────────────────────────────────────────
+function setApiStatus(connected) {
+  const dot = document.getElementById("api-dot");
+  const text = document.getElementById("api-status-text");
 
-// ── Connection ─────────────────────────────────────────────
-async function testConnection() {
-  const dot = document.getElementById('api-dot');
-  const txt = document.getElementById('api-status-text');
-  dot.className = 'api-status-dot';
-  txt.textContent = 'Connecting...';
-  const res = await api('ping');
-  if (res && res.ok) {
-    dot.className = 'api-status-dot connected';
-    txt.textContent = 'Connected';
+  if (!dot || !text) return;
+
+  if (connected) {
+    dot.classList.add("connected");
+    dot.classList.remove("error");
+    text.textContent = "Connected";
   } else {
-    dot.className = 'api-status-dot error';
-    txt.textContent = 'Error';
+    dot.classList.remove("connected");
+    dot.classList.add("error");
+    text.textContent = "Disconnected";
   }
-  return res && res.ok;
 }
 
+// ── API HELPERS ────────────────────────────────────────────
+async function apiGet(action, params = {}) {
+  try {
+    const query = new URLSearchParams({ action, ...params }).toString();
+    const res = await fetch(`${API_URL}?${query}`);
+    const data = await res.json();
+    setApiStatus(true);
+    return data;
+  } catch (err) {
+    setApiStatus(false);
+    console.error(err);
+    return {};
+  }
+}
+
+async function apiPost(body) {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    setApiStatus(true);
+    return data;
+  } catch (err) {
+    setApiStatus(false);
+    console.error(err);
+    return {};
+  }
+}
+
+// ── CONFIG ─────────────────────────────────────────────────
 function saveApiUrl() {
-  const val = document.getElementById('api-url-input').value.trim();
-  if (!val) { toast('Please enter a URL', 'error'); return; }
-  state.apiUrl = val;
-  localStorage.setItem('gf_api_url', val);
-  document.getElementById('config-banner').classList.remove('visible');
-  document.getElementById('modal-api-url').value = val;
-  testConnection().then(ok => { if (ok) loadEvents(); });
+  const input = document.getElementById("api-url-input").value.trim();
+  if (!input) return;
+
+  API_URL = input;
+  localStorage.setItem("API_URL", input);
+
+  document.getElementById("config-banner").classList.remove("visible");
+
+  loadEvents();
 }
 
 function saveApiUrlFromModal() {
-  const val = document.getElementById('modal-api-url').value.trim();
-  if (!val) { toast('Please enter a URL', 'error'); return; }
-  state.apiUrl = val;
-  localStorage.setItem('gf_api_url', val);
-  document.getElementById('api-url-input').value = val;
-  document.getElementById('config-modal').classList.add('hidden');
-  document.getElementById('config-banner').classList.remove('visible');
-  testConnection().then(ok => { if (ok) loadEvents(); });
+  const input = document.getElementById("modal-api-url").value.trim();
+  if (!input) return;
+
+  API_URL = input;
+  localStorage.setItem("API_URL", input);
+
+  document.getElementById("config-modal").classList.add("hidden");
+  document.getElementById("config-banner").classList.remove("visible");
+
+  loadEvents();
 }
 
-function showConfigModal() {
-  document.getElementById('config-modal').classList.remove('hidden');
-}
-function closeConfigModal(e) {
-  if (e.target.id === 'config-modal') document.getElementById('config-modal').classList.add('hidden');
-}
-
-// ── Events ─────────────────────────────────────────────────
+// ── LOADERS (SYNC CORE) ────────────────────────────────────
 async function loadEvents() {
-  const data = await api('getEvents');
-  if (!data) return;
-  state.events = data.events || [];
+  const res = await apiGet("getEvents");
+  events = res.events || [];
   renderEvents();
 }
 
-function renderEvents() {
-  const grid = document.getElementById('events-grid');
-  if (!state.events.length) {
-    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🗓</div><div class="empty-title">No events yet</div><div class="empty-sub">Click "New Event" to get started</div></div>`;
-    return;
-  }
-  grid.innerHTML = state.events.map(ev => `
-    <div class="event-card ${state.selectedEvent?.eventId === ev.eventId ? 'selected' : ''}" onclick="selectEvent('${ev.eventId}')">
-      <div class="event-card-name" title="${esc(ev.eventName)}">${esc(ev.eventName)}</div>
-      <div class="event-card-date">${formatDate(ev.createdDate)}</div>
-      <div class="event-card-count">👥 ${ev.guestCount ?? 0} guests</div>
-    </div>
-  `).join('');
+async function loadOwners() {
+  if (!selectedEventId) return;
+
+  const res = await apiGet("getOwners", { eventId: selectedEventId });
+  owners = res.owners || [];
+  renderOwners();
 }
 
-function toggleCreateEvent() {
-  const form = document.getElementById('create-event-form');
-  form.classList.toggle('hidden');
-  if (!form.classList.contains('hidden')) {
-    document.getElementById('new-event-name').focus();
-  }
+async function loadGuests() {
+  if (!selectedEventId) return;
+
+  const res = await apiGet("getGuests", { eventId: selectedEventId });
+  guests = res.guests || [];
+
+  renderTable();
+  updateStats();
 }
 
+// ── WRITE ACTIONS (FORCED SYNC) ────────────────────────────
 async function createEvent() {
-  const name = document.getElementById('new-event-name').value.trim();
-  if (!name) { toast('Event name is required', 'error'); return; }
-  const btn = event.target;
-  setLoading(btn, true);
-  const data = await apiPost('createEvent', { eventName: name });
-  setLoading(btn, false);
-  if (data) {
-    toast(`Event "${name}" created!`, 'success');
-    document.getElementById('new-event-name').value = '';
-    document.getElementById('create-event-form').classList.add('hidden');
-    await loadEvents();
-  }
+  const name = document.getElementById("new-event-name").value.trim();
+  if (!name) return;
+
+  await apiPost({ action: "createEvent", eventName: name });
+
+  document.getElementById("new-event-name").value = "";
+
+  await loadEvents(); // 🔥 sync
 }
 
-async function selectEvent(eventId) {
-  state.selectedEvent = state.events.find(e => e.eventId === eventId);
-  state.selectedOwner = null;
-  state.guests = [];
-  renderEvents();
-  document.getElementById('guest-management').classList.remove('hidden');
-  document.getElementById('owners-event-label').textContent = `— ${state.selectedEvent.eventName}`;
-  document.getElementById('filter-owner').innerHTML = '<option value="all">All owners</option>';
+async function addOwner() {
+  const name = document.getElementById("new-owner-name").value.trim();
+  const limit = document.getElementById("new-owner-limit").value;
+
+  if (!name || !selectedEventId) return;
+
+  await apiPost({
+    action: "addOwner",
+    eventId: selectedEventId,
+    ownerName: name,
+    guestLimit: limit
+  });
+
+  document.getElementById("new-owner-name").value = "";
+  document.getElementById("new-owner-limit").value = "";
+
   await loadOwners();
   await loadGuests();
 }
 
-// ── Owners ─────────────────────────────────────────────────
-async function loadOwners() {
-  const data = await api('getOwners', { eventId: state.selectedEvent.eventId });
-  if (!data) return;
-  state.owners = data.owners || [];
-  renderOwners();
-  updateOwnerFilter();
-}
-
-function renderOwners() {
-  const wrap = document.getElementById('owners-list');
-  if (!state.owners.length) {
-    wrap.innerHTML = `<span class="text-muted">No owners yet — add one above</span>`;
-    return;
-  }
-  wrap.innerHTML = state.owners.map(o => {
-    const count = state.guests.filter(g => g.ownerId === o.ownerId).length;
-    const hasLimit = o.guestLimit > 0;
-    const atLimit = hasLimit && count >= o.guestLimit;
-    const isSelected = state.selectedOwner?.ownerId === o.ownerId;
-    return `
-      <div class="owner-chip ${isSelected ? 'selected' : ''}" onclick="selectOwner('${o.ownerId}')">
-        ${esc(o.ownerName)}
-        <span class="owner-chip-count ${atLimit ? 'at-limit' : ''}">
-          ${count}${hasLimit ? '/' + o.guestLimit : ''}
-        </span>
-      </div>
-    `;
-  }).join('');
-}
-
-function selectOwner(ownerId) {
-  state.selectedOwner = state.owners.find(o => o.ownerId === ownerId);
-  renderOwners();
-  updateLimitDisplay();
-}
-
-function updateLimitDisplay() {
-  const el = document.getElementById('owner-limit-display');
-  if (!state.selectedOwner) { el.textContent = ''; return; }
-  const o = state.selectedOwner;
-  const count = state.guests.filter(g => g.ownerId === o.ownerId).length;
-  if (o.guestLimit > 0) {
-    const pct = Math.min(100, Math.round((count / o.guestLimit) * 100));
-    el.textContent = `${count} / ${o.guestLimit} guests`;
-    const btn = document.getElementById('add-guest-btn');
-    if (count >= o.guestLimit) {
-      btn.disabled = true;
-      btn.textContent = 'List Full';
-      el.style.color = 'var(--danger)';
-    } else {
-      btn.disabled = false;
-      btn.textContent = 'Add to List';
-      el.style.color = 'var(--text-muted)';
-    }
-  } else {
-    el.textContent = '';
-    document.getElementById('add-guest-btn').disabled = false;
-    document.getElementById('add-guest-btn').textContent = 'Add to List';
-  }
-}
-
-function toggleAddOwner() {
-  document.getElementById('add-owner-form').classList.toggle('hidden');
-  if (!document.getElementById('add-owner-form').classList.contains('hidden')) {
-    document.getElementById('new-owner-name').focus();
-  }
-}
-
-async function addOwner() {
-  if (!state.selectedEvent) { toast('Select an event first', 'error'); return; }
-  const name = document.getElementById('new-owner-name').value.trim();
-  const limit = parseInt(document.getElementById('new-owner-limit').value) || 0;
-  if (!name) { toast('Owner name is required', 'error'); return; }
-  const data = await apiPost('addOwner', {
-    eventId: state.selectedEvent.eventId,
-    ownerName: name,
-    guestLimit: limit,
-  });
-  if (data) {
-    toast(`Owner "${name}" added`, 'success');
-    document.getElementById('new-owner-name').value = '';
-    document.getElementById('new-owner-limit').value = '';
-    document.getElementById('add-owner-form').classList.add('hidden');
-    await loadOwners();
-    updateOwnerFilter();
-  }
-}
-
-// ── Guests ─────────────────────────────────────────────────
-async function loadGuests() {
-  if (!state.selectedEvent) return;
-  const data = await api('getGuests', { eventId: state.selectedEvent.eventId });
-  if (!data) return;
-  state.guests = data.guests || [];
-  renderOwners();
-  renderTable();
-  renderStats();
-  updateLimitDisplay();
-}
-
 async function addGuest() {
-  if (!state.selectedOwner) { toast('Please select a guest list owner first', 'error'); return; }
-  const name = document.getElementById('guest-name').value.trim();
-  if (!name) { toast('Guest name is required', 'error'); return; }
-  const email = document.getElementById('guest-email').value.trim();
-  const phone = document.getElementById('guest-phone').value.trim();
+  const name = document.getElementById("guest-name").value.trim();
+  const email = document.getElementById("guest-email").value;
+  const phone = document.getElementById("guest-phone").value;
 
-  // Client-side limit check
-  if (state.selectedOwner.guestLimit > 0) {
-    const count = state.guests.filter(g => g.ownerId === state.selectedOwner.ownerId).length;
-    if (count >= state.selectedOwner.guestLimit) {
-      toast(`Guest list for ${state.selectedOwner.ownerName} is full`, 'error');
-      return;
-    }
-  }
+  if (!name || !selectedOwnerId) return;
 
-  const btn = document.getElementById('add-guest-btn');
-  setLoading(btn, true);
-  const data = await apiPost('addGuest', {
-    eventId: state.selectedEvent.eventId,
-    ownerId: state.selectedOwner.ownerId,
-    name, email, phone,
+  await apiPost({
+    action: "addGuest",
+    eventId: selectedEventId,
+    ownerId: selectedOwnerId,
+    name,
+    email,
+    phone
   });
-  setLoading(btn, false);
-  if (data) {
-    toast(`${name} added to the list!`, 'success');
-    document.getElementById('guest-name').value = '';
-    document.getElementById('guest-email').value = '';
-    document.getElementById('guest-phone').value = '';
-    await loadGuests();
-    // Update event guest count
-    const ev = state.events.find(e => e.eventId === state.selectedEvent.eventId);
-    if (ev) ev.guestCount = (ev.guestCount || 0) + 1;
-    renderEvents();
-  }
+
+  document.getElementById("guest-name").value = "";
+  document.getElementById("guest-email").value = "";
+  document.getElementById("guest-phone").value = "";
+
+  await loadGuests();   // 🔥 critical
+  await loadEvents();   // update counts
 }
 
 async function toggleCheckIn(guestId, currentStatus) {
-  const newStatus = !currentStatus;
-  const data = await apiPost('updateCheckIn', { guestId, checkedIn: newStatus });
-  if (data) {
-    const g = state.guests.find(g => g.guestId === guestId);
-    if (g) g.checkedIn = newStatus;
-    renderTable();
-    renderStats();
-    toast(newStatus ? '✓ Checked in!' : 'Check-in removed', newStatus ? 'success' : 'info');
-  }
+  await apiPost({
+    action: "updateCheckIn",
+    guestId,
+    checkedIn: !currentStatus
+  });
+
+  await loadGuests(); // 🔥 global sync
 }
 
-async function refreshGuests() {
-  toast('Refreshing...', 'info');
+// ── EVENT SELECTION ────────────────────────────────────────
+async function selectEvent(eventId) {
+  selectedEventId = eventId;
+  selectedOwnerId = null;
+
+  document.getElementById("guest-management").classList.remove("hidden");
+
+  await loadOwners();
   await loadGuests();
 }
 
-// ── Table Rendering ─────────────────────────────────────────
-function renderTable() {
-  const tbody = document.getElementById('guests-tbody');
-  const search = document.getElementById('search-input').value.toLowerCase();
-  const filterCI = document.getElementById('filter-checkin').value;
-  const filterOwner = document.getElementById('filter-owner').value;
-
-  let guests = [...state.guests];
-
-  // Search
-  if (search) {
-    guests = guests.filter(g =>
-      g.name.toLowerCase().includes(search) ||
-      (g.email || '').toLowerCase().includes(search) ||
-      (g.phone || '').toLowerCase().includes(search)
-    );
+// ── AUTO SYNC (MULTI-DEVICE MAGIC) ─────────────────────────
+setInterval(() => {
+  if (selectedEventId) {
+    loadGuests();
   }
+}, 5000);
 
-  // Filter check-in
-  if (filterCI === 'checked') guests = guests.filter(g => g.checkedIn);
-  if (filterCI === 'not-checked') guests = guests.filter(g => !g.checkedIn);
-
-  // Filter owner
-  if (filterOwner !== 'all') guests = guests.filter(g => g.ownerId === filterOwner);
-
-  // Sort
-  guests.sort((a, b) => {
-    let va = a[state.sortKey] ?? '';
-    let vb = b[state.sortKey] ?? '';
-    if (typeof va === 'boolean') { va = va ? 1 : 0; vb = vb ? 1 : 0; }
-    if (va < vb) return -1 * state.sortDir;
-    if (va > vb) return 1 * state.sortDir;
-    return 0;
-  });
-
-  if (!guests.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No guests found</div><div class="empty-sub">Try adjusting your search or filters</div></div></td></tr>`;
-    return;
+// ── INIT ───────────────────────────────────────────────────
+window.onload = () => {
+  if (API_URL) {
+    document.getElementById("config-banner").classList.remove("visible");
+    loadEvents();
   }
-
-  tbody.innerHTML = guests.map(g => `
-    <tr class="${g.checkedIn ? 'checked-in' : ''}">
-      <td class="guest-name">${esc(g.name)}</td>
-      <td>${g.email ? esc(g.email) : '<span class="text-muted">—</span>'}</td>
-      <td>${g.phone ? esc(g.phone) : '<span class="text-muted">—</span>'}</td>
-      <td><span class="owner-badge">${esc(g.ownerName || '—')}</span></td>
-      <td>
-        <button class="checkin-btn ${g.checkedIn ? 'checked' : 'not-checked'}" onclick="toggleCheckIn('${g.guestId}', ${g.checkedIn})">
-          <span class="checkin-dot"></span>
-          ${g.checkedIn ? 'Checked In' : 'Not In'}
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-function sortBy(key) {
-  if (state.sortKey === key) {
-    state.sortDir *= -1;
-  } else {
-    state.sortKey = key;
-    state.sortDir = 1;
-  }
-  document.querySelectorAll('thead th').forEach(th => {
-    th.classList.remove('sort-asc', 'sort-desc');
-  });
-  const thIdx = ['name','email','phone','ownerName','checkedIn'].indexOf(key);
-  const ths = document.querySelectorAll('thead th');
-  if (ths[thIdx]) {
-    ths[thIdx].classList.add(state.sortDir === 1 ? 'sort-asc' : 'sort-desc');
-  }
-  renderTable();
-}
-
-// ── Stats ─────────────────────────────────────────────────
-function renderStats() {
-  const bar = document.getElementById('stats-bar');
-  const total = state.guests.length;
-  const checkedIn = state.guests.filter(g => g.checkedIn).length;
-  const pct = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
-  bar.innerHTML = `
-    <div class="stat-chip accent">
-      <span class="stat-chip-value">${total}</span>
-      <span class="stat-chip-label">Total Guests</span>
-    </div>
-    <div class="stat-chip success">
-      <span class="stat-chip-value">${checkedIn}</span>
-      <span class="stat-chip-label">Checked In</span>
-    </div>
-    <div class="stat-chip">
-      <span class="stat-chip-value">${total - checkedIn}</span>
-      <span class="stat-chip-label">Pending</span>
-    </div>
-    <div class="stat-chip">
-      <span class="stat-chip-value">${pct}%</span>
-      <span class="stat-chip-label">Arrival Rate</span>
-    </div>
-  `;
-}
-
-// ── Owner Filter ──────────────────────────────────────────
-function updateOwnerFilter() {
-  const sel = document.getElementById('filter-owner');
-  sel.innerHTML = '<option value="all">All owners</option>' +
-    state.owners.map(o => `<option value="${o.ownerId}">${esc(o.ownerName)}</option>`).join('');
-}
-
-// ── Utilities ──────────────────────────────────────────────
-function esc(str) {
-  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function formatDate(str) {
-  if (!str) return '';
-  try {
-    return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  } catch { return str; }
-}
-
-function setLoading(btn, loading) {
-  if (loading) {
-    btn.dataset.orig = btn.innerHTML;
-    btn.innerHTML = '<span class="spinner"></span>';
-    btn.disabled = true;
-  } else {
-    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
-    btn.disabled = false;
-  }
-}
-
-function toast(msg, type = 'info') {
-  const container = document.getElementById('toast-container');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<div class="toast-dot"></div><span>${msg}</span>`;
-  container.appendChild(el);
-  setTimeout(() => {
-    el.style.opacity = '0';
-    el.style.transition = 'opacity 0.3s';
-    setTimeout(() => el.remove(), 300);
-  }, 3200);
-}
+};
 </script>
 </body>
 </html>
