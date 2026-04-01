@@ -6,13 +6,46 @@
 <title>GuestFlow — Event Guest Management</title>
 
 <style>
-/* KEEPING USER DESIGN CORE */
-body { background:#0a0a0f; color:#f0eeff; font-family: 'DM Sans', sans-serif; }
+/* ORIGINAL STYLE PRESERVED */
+body {
+  font-family: 'DM Sans', sans-serif;
+  background:#0a0a0f;
+  color:#f0eeff;
+  margin:0;
+}
+.app-shell {
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+.section {
+  background:#111118;
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:20px;
+}
+.btn {
+  padding:10px 16px;
+  border-radius:10px;
+  background:#8b5cf6;
+  color:white;
+  border:none;
+  cursor:pointer;
+}
+.btn-ghost {
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.1);
+  color:#ccc;
+}
 .hidden { display:none !important; }
-.app-shell { max-width:1100px; margin:auto; padding:20px; }
-.btn { cursor:pointer; padding:10px 16px; border-radius:8px; background:#8b5cf6; color:white; border:none; }
-.btn-ghost { background:transparent; border:1px solid #333; color:#ccc; }
-.section { background:#111118; padding:20px; margin-bottom:20px; border-radius:12px; }
+.event-card {
+  background:#16161f;
+  padding:14px;
+  border-radius:10px;
+  margin-top:10px;
+  cursor:pointer;
+}
 </style>
 
 </head>
@@ -24,21 +57,25 @@ body { background:#0a0a0f; color:#f0eeff; font-family: 'DM Sans', sans-serif; }
 
 <!-- EVENTS -->
 <div class="section">
-  <button class="btn-ghost" onclick="toggleCreateEvent()" id="create-event-toggle">+ New Event</button>
 
-  <div id="create-event-form" class="hidden" style="margin-top:10px;">
-    <input id="new-event-name" placeholder="Event Name"/>
-    <button class="btn" onclick="createEvent()">Create</button>
-  </div>
+<button class="btn-ghost" onclick="toggleCreateEvent()" id="create-event-toggle">
++ New Event
+</button>
 
-  <div id="events-grid"></div>
+<div id="create-event-form" class="hidden" style="margin-top:12px;">
+  <input id="new-event-name" placeholder="Event Name" style="padding:8px;">
+  <button class="btn" onclick="createEvent()">Create</button>
+</div>
+
+<div id="events-grid"></div>
+
 </div>
 
 </div>
 
 <script>
 
-// 🔥 HARDCODED API
+// 🔥 HARDWIRED API
 let API_URL = "https://script.google.com/macros/s/AKfycbw3yuIKkV3M5H0MUTCjb7BVX0Ym32CvSuKOJf0VKFGXdSldTpXVZxwj_7hPjZOHUxAk/exec";
 
 let events = [];
@@ -110,16 +147,9 @@ function renderEvents(){
 
   events.forEach(e=>{
     const div = document.createElement("div");
-    div.style.padding = "12px";
-    div.style.marginTop = "10px";
-    div.style.border = "1px solid #333";
-    div.style.borderRadius = "8px";
-    div.style.cursor = "pointer";
-
+    div.className = "event-card";
     div.innerHTML = `<strong>${e.eventName}</strong>`;
-
     div.onclick = () => selectEvent(e.eventId);
-
     grid.appendChild(div);
   });
 }
@@ -127,6 +157,7 @@ function renderEvents(){
 // ── SELECT EVENT ──
 function selectEvent(eventId){
   selectedEventId = eventId;
+  console.log("Selected:", eventId);
 }
 
 // ── AUTO SYNC ──
