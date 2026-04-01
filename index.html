@@ -719,19 +719,8 @@
         <div class="api-status-dot" id="api-dot"></div>
         <span id="api-status-text">Not connected</span>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="showConfigModal()">⚙ Config</button>
     </div>
   </header>
-
-  <!-- ── Config Banner ── -->
-  <div id="config-banner" class="visible">
-    <h3>⚡ Setup Required</h3>
-    <p>Paste your Google Apps Script Web App URL below. Deploy the <code>Code.gs</code> file as a Web App and copy the URL here. This connects the frontend to your Google Sheet.</p>
-    <div class="url-input-row">
-      <input type="url" id="api-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
-      <button class="btn btn-primary" onclick="saveApiUrl()">Connect</button>
-    </div>
-  </div>
 
   <!-- ── Step 1: Events ── -->
   <div class="section" id="section-events">
@@ -893,29 +882,13 @@
 
 </div><!-- /app-shell -->
 
-<!-- ── Config Modal ── -->
-<div id="config-modal" class="modal-overlay hidden" onclick="closeConfigModal(event)">
-  <div class="modal">
-    <div class="modal-title">⚙ API Configuration</div>
-    <div class="input-group" style="margin-bottom:14px;">
-      <label class="input-label">Apps Script URL</label>
-      <input type="url" id="modal-api-url" class="input-field" placeholder="https://script.google.com/macros/s/..." />
-    </div>
-    <p class="text-muted" style="margin-bottom:4px;">Paste your deployed Google Apps Script Web App URL. The script must be deployed with "Anyone" access.</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="document.getElementById('config-modal').classList.add('hidden')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveApiUrlFromModal()">Save & Connect</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // ═══════════════════════════════════════════════════════════
 // GuestFlow — Synced Frontend (Google Sheets Powered)
 // ═══════════════════════════════════════════════════════════
 
 // ── GLOBAL STATE ───────────────────────────────────────────
-let API_URL = localStorage.getItem("API_URL") || "";
+let API_URL = "https://script.google.com/macros/s/AKfycbw3yuIKkV3M5H0MUTCjb7BVX0Ym32CvSuKOJf0VKFGXdSldTpXVZxwj_7hPjZOHUxAk/exec";
 
 let events = [];
 let owners = [];
@@ -975,30 +948,7 @@ async function apiPost(body) {
 }
 
 // ── CONFIG ─────────────────────────────────────────────────
-function saveApiUrl() {
-  const input = document.getElementById("api-url-input").value.trim();
-  if (!input) return;
 
-  API_URL = input;
-  localStorage.setItem("API_URL", input);
-
-  document.getElementById("config-banner").classList.remove("visible");
-
-  loadEvents();
-}
-
-function saveApiUrlFromModal() {
-  const input = document.getElementById("modal-api-url").value.trim();
-  if (!input) return;
-
-  API_URL = input;
-  localStorage.setItem("API_URL", input);
-
-  document.getElementById("config-modal").classList.add("hidden");
-  document.getElementById("config-banner").classList.remove("visible");
-
-  loadEvents();
-}
 
 // ── LOADERS (SYNC CORE) ────────────────────────────────────
 async function loadEvents() {
@@ -1110,12 +1060,7 @@ setInterval(() => {
 }, 5000);
 
 // ── INIT ───────────────────────────────────────────────────
-window.onload = () => {
-  if (API_URL) {
-    document.getElementById("config-banner").classList.remove("visible");
-    loadEvents();
-  }
-};
+
 </script>
 </body>
 </html>
