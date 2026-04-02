@@ -696,10 +696,10 @@
     <div id="create-event-form" class="create-event-form hidden" style="margin-bottom:16px;">
       <div class="input-group">
         <label class="input-label">Event Name</label>
-        <input type="text" id="new-event-name" class="input-field" placeholder="e.g. Saturday Night at Venue X" onkeydown="if(event.key==='Enter')createEvent()" />
+        <input type="text" id="new-event-name" class="input-field" placeholder="e.g. Saturday Night at Venue X" onkeydown="if(event.key==='Enter')createNewEvent()" />
       </div>
       <div style="display:flex;align-items:flex-end;gap:8px;">
-        <button class="btn btn-primary" id="create-event-btn" onclick="createEvent()">Create</button>
+        <button class="btn btn-primary" id="create-event-btn" onclick="createNewEvent()">Create</button>
         <button class="btn btn-ghost" onclick="toggleCreateEvent()">Cancel</button>
       </div>
     </div>
@@ -942,7 +942,7 @@ function toggleCreateEvent() {
   }
 }
 
-async function createEvent() {
+async function createNewEvent() {
   const name = document.getElementById('new-event-name').value.trim();
   if (!name) { toast('Event name is required', 'error'); return; }
   const btn = document.getElementById('create-event-btn');
