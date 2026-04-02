@@ -696,10 +696,10 @@
     <div id="create-event-form" class="create-event-form hidden" style="margin-bottom:16px;">
       <div class="input-group">
         <label class="input-label">Event Name</label>
-        <input type="text" id="new-event-name" class="input-field" placeholder="e.g. Saturday Night at Venue X" />
+        <input type="text" id="new-event-name" class="input-field" placeholder="e.g. Saturday Night at Venue X" onkeydown="if(event.key==='Enter')createEvent()" />
       </div>
       <div style="display:flex;align-items:flex-end;gap:8px;">
-        <button class="btn btn-primary" onclick="createEvent()">Create</button>
+        <button class="btn btn-primary" id="create-event-btn" onclick="createEvent()">Create</button>
         <button class="btn btn-ghost" onclick="toggleCreateEvent()">Cancel</button>
       </div>
     </div>
@@ -945,15 +945,21 @@ function toggleCreateEvent() {
 async function createEvent() {
   const name = document.getElementById('new-event-name').value.trim();
   if (!name) { toast('Event name is required', 'error'); return; }
-  const btn = document.querySelector('#create-event-form .btn-primary');
-  setLoading(btn, true);
-  const data = await apiPost('createEvent', { eventName: name });
-  setLoading(btn, false);
-  if (data) {
-    toast(`Event "${name}" created!`, 'success');
-    document.getElementById('new-event-name').value = '';
-    document.getElementById('create-event-form').classList.add('hidden');
-    await loadEvents();
+  const btn = document.getElementById('create-event-btn');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+  try {
+    const data = await apiPost('createEvent', { eventName: name });
+    if (data && data.ok) {
+      toast(`Event "${name}" created!`, 'success');
+      document.getElementById('new-event-name').value = '';
+      document.getElementById('create-event-form').classList.add('hidden');
+      await loadEvents();
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
   }
 }
 
