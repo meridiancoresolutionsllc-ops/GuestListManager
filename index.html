@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GuestFlow — Event Guest Management</title>
+  <title>VIP List — Event Guest Management</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
@@ -109,50 +109,6 @@
     }
     .api-status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
     .api-status-dot.error { background: var(--danger); }
-
-    /* ─── Config Banner ───────────────────────────────────────────── */
-    #config-banner {
-      background: var(--gold-bg);
-      border: 1px solid rgba(232,200,122,0.25);
-      border-radius: var(--radius-lg);
-      padding: 20px 24px;
-      margin-bottom: 28px;
-      display: none;
-    }
-    #config-banner.visible { display: block; }
-    #config-banner h3 {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--gold);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    #config-banner p {
-      font-size: 13px;
-      color: rgba(232,200,122,0.7);
-      margin-bottom: 14px;
-      line-height: 1.6;
-    }
-    .url-input-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .url-input-row input {
-      flex: 1;
-      min-width: 260px;
-      background: rgba(232,200,122,0.07);
-      border: 1px solid rgba(232,200,122,0.2);
-      border-radius: var(--radius);
-      padding: 10px 14px;
-      font-size: 13px;
-      font-family: var(--mono);
-      color: var(--gold);
-    }
-    .url-input-row input::placeholder { color: rgba(232,200,122,0.3); }
-    .url-input-row input:focus { border-color: rgba(232,200,122,0.5); }
 
     /* ─── Sections ───────────────────────────────────────────────── */
     .section {
@@ -712,26 +668,17 @@
   <header class="app-header">
     <div class="logo">
       <div class="logo-icon">🎟</div>
-      <span class="logo-text">Guest<span>Flow</span></span>
+      <span class="logo-text">VIP <span>List</span></span>
     </div>
     <div class="header-right">
       <div class="api-status" id="api-status">
         <div class="api-status-dot" id="api-dot"></div>
-        <span id="api-status-text">Not connected</span>
+        <span id="api-status-text">Connecting...</span>
       </div>
-      <button class="btn btn-ghost btn-sm" onclick="showConfigModal()">⚙ Config</button>
     </div>
   </header>
 
-  <!-- ── Config Banner ── -->
-  <div id="config-banner" class="visible">
-    <h3>⚡ Setup Required</h3>
-    <p>Paste your Google Apps Script Web App URL below. Deploy the <code>Code.gs</code> file as a Web App and copy the URL here. This connects the frontend to your Google Sheet.</p>
-    <div class="url-input-row">
-      <input type="url" id="api-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec" />
-      <button class="btn btn-primary" onclick="saveApiUrl()">Connect</button>
-    </div>
-  </div>
+
 
   <!-- ── Step 1: Events ── -->
   <div class="section" id="section-events">
@@ -893,21 +840,7 @@
 
 </div><!-- /app-shell -->
 
-<!-- ── Config Modal ── -->
-<div id="config-modal" class="modal-overlay hidden" onclick="closeConfigModal(event)">
-  <div class="modal">
-    <div class="modal-title">⚙ API Configuration</div>
-    <div class="input-group" style="margin-bottom:14px;">
-      <label class="input-label">Apps Script URL</label>
-      <input type="url" id="modal-api-url" class="input-field" placeholder="https://script.google.com/macros/s/..." />
-    </div>
-    <p class="text-muted" style="margin-bottom:4px;">Paste your deployed Google Apps Script Web App URL. The script must be deployed with "Anyone" access.</p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="document.getElementById('config-modal').classList.add('hidden')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveApiUrlFromModal()">Save & Connect</button>
-    </div>
-  </div>
-</div>
+
 
 <script>
 // ═══════════════════════════════════════════════════════════
@@ -926,31 +859,27 @@ const state = {
   sortDir: 1,
 };
 
+// ── Hardcoded API URL ───────────────────────────────────────
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3yuIKkV3M5H0MUTCjb7BVX0Ym32CvSuKOJf0VKFGXdSldTpXVZxwj_7hPjZOHUxAk/exec';
+
 // ── Init ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const saved = localStorage.getItem('gf_api_url');
-  if (saved) {
-    state.apiUrl = saved;
-    document.getElementById('api-url-input').value = saved;
-    document.getElementById('modal-api-url').value = saved;
-    document.getElementById('config-banner').classList.remove('visible');
-    testConnection().then(() => loadEvents());
-  }
+  state.apiUrl = API_URL;
+  testConnection().then(() => loadEvents());
 });
 
 // ── API Layer ──────────────────────────────────────────────
+// All calls use GET + URL params — Apps Script requires this for cross-origin
+// requests. iOS Safari blocks fetch POST without proper CORS headers, but
+// Apps Script GET requests work fine with redirect: follow.
 async function api(action, params = {}) {
-  if (!state.apiUrl) {
-    toast('Please configure your API URL first', 'error');
-    return null;
-  }
   const url = new URL(state.apiUrl);
   url.searchParams.set('action', action);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
   try {
-    const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
+    const res = await fetch(url.toString(), { redirect: 'follow' });
+    const text = await res.text();
+    const data = JSON.parse(text);
     if (data.error) throw new Error(data.error);
     return data;
   } catch (e) {
@@ -960,25 +889,9 @@ async function api(action, params = {}) {
   }
 }
 
+// Write operations also go via GET params — Apps Script doGet handles all actions.
 async function apiPost(action, body = {}) {
-  if (!state.apiUrl) {
-    toast('Please configure your API URL first', 'error');
-    return null;
-  }
-  try {
-    const res = await fetch(state.apiUrl, {
-      method: 'POST',
-      body: JSON.stringify({ action, ...body }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
-  } catch (e) {
-    console.error('API error:', e);
-    toast(`API error: ${e.message}`, 'error');
-    return null;
-  }
+  return api(action, body);
 }
 
 // ── Connection ─────────────────────────────────────────────
@@ -996,34 +909,6 @@ async function testConnection() {
     txt.textContent = 'Error';
   }
   return res && res.ok;
-}
-
-function saveApiUrl() {
-  const val = document.getElementById('api-url-input').value.trim();
-  if (!val) { toast('Please enter a URL', 'error'); return; }
-  state.apiUrl = val;
-  localStorage.setItem('gf_api_url', val);
-  document.getElementById('config-banner').classList.remove('visible');
-  document.getElementById('modal-api-url').value = val;
-  testConnection().then(ok => { if (ok) loadEvents(); });
-}
-
-function saveApiUrlFromModal() {
-  const val = document.getElementById('modal-api-url').value.trim();
-  if (!val) { toast('Please enter a URL', 'error'); return; }
-  state.apiUrl = val;
-  localStorage.setItem('gf_api_url', val);
-  document.getElementById('api-url-input').value = val;
-  document.getElementById('config-modal').classList.add('hidden');
-  document.getElementById('config-banner').classList.remove('visible');
-  testConnection().then(ok => { if (ok) loadEvents(); });
-}
-
-function showConfigModal() {
-  document.getElementById('config-modal').classList.remove('hidden');
-}
-function closeConfigModal(e) {
-  if (e.target.id === 'config-modal') document.getElementById('config-modal').classList.add('hidden');
 }
 
 // ── Events ─────────────────────────────────────────────────
@@ -1060,7 +945,7 @@ function toggleCreateEvent() {
 async function createEvent() {
   const name = document.getElementById('new-event-name').value.trim();
   if (!name) { toast('Event name is required', 'error'); return; }
-  const btn = event.target;
+  const btn = document.querySelector('#create-event-form .btn-primary');
   setLoading(btn, true);
   const data = await apiPost('createEvent', { eventName: name });
   setLoading(btn, false);
