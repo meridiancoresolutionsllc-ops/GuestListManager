@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VIP List — Event Guest Management</title>
+  <title>Haus Guests — Event Guest Management</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
@@ -704,7 +704,7 @@
   <div class="auth-card">
     <div class="logo" style="margin-bottom:18px;">
       <div class="logo-icon">🔒</div>
-      <span class="logo-text">VIP <span>List</span></span>
+      <span class="logo-text">Haus <span>Guests</span></span>
     </div>
     <div class="auth-title">Protected Access</div>
     <div class="auth-subtitle">Enter the shared password to open the guest list app.</div>
@@ -725,7 +725,7 @@
   <header class="app-header">
     <div class="logo">
       <div class="logo-icon">🎟</div>
-      <span class="logo-text">VIP <span>List</span></span>
+      <span class="logo-text">Haus <span>Guests</span></span>
     </div>
     <div class="header-right">
       <div class="api-status" id="api-status">
@@ -781,13 +781,13 @@
           Guest List Owners
           <span class="text-muted" id="owners-event-label"></span>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="toggleAddOwner()">+ Add Owner</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAddOwner()">+ Add Guest List</button>
       </div>
 
       <div id="add-owner-form" class="add-owner-form hidden" style="margin-bottom:16px;">
         <div class="input-group" style="min-width:150px;">
-          <label class="input-label">Owner Name</label>
-          <input type="text" id="new-owner-name" class="input-field" placeholder="e.g. Rainn, VIP Host..." />
+          <label class="input-label">List Name</label>
+          <input type="text" id="new-owner-name" class="input-field" placeholder="e.g. Your Name VIP Host..." />
         </div>
         <div class="input-group" style="max-width:110px;">
           <label class="input-label">Max Guests</label>
@@ -903,7 +903,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // ── App Lock ─────────────────────────────────────────────
-const APP_PASSWORD = 'Ice-haus-events-1!';
+const APP_PASSWORD = 'Ice-haus-events-1';
 const AUTH_STORAGE_KEY = 'vip-list-authenticated';
 
 // ── State ──────────────────────────────────────────────────
@@ -1263,14 +1263,19 @@ function renderTable() {
   // Filter owner
   if (filterOwner !== 'all') guests = guests.filter(g => g.ownerId === filterOwner);
 
-  // Sort
+  // Always keep guest entries in alphabetical order by name
   guests.sort((a, b) => {
-    let va = a[state.sortKey] ?? '';
-    let vb = b[state.sortKey] ?? '';
-    if (typeof va === 'boolean') { va = va ? 1 : 0; vb = vb ? 1 : 0; }
-    if (va < vb) return -1 * state.sortDir;
-    if (va > vb) return 1 * state.sortDir;
-    return 0;
+    const nameA = String(a.name || '').toLocaleLowerCase();
+    const nameB = String(b.name || '').toLocaleLowerCase();
+    const byName = nameA.localeCompare(nameB);
+    if (byName !== 0) return byName;
+
+    const ownerA = String(a.ownerName || '').toLocaleLowerCase();
+    const ownerB = String(b.ownerName || '').toLocaleLowerCase();
+    const byOwner = ownerA.localeCompare(ownerB);
+    if (byOwner !== 0) return byOwner;
+
+    return String(a.guestId || '').localeCompare(String(b.guestId || ''));
   });
 
   if (!guests.length) {
@@ -1293,19 +1298,14 @@ function renderTable() {
 }
 
 function sortBy(key) {
-  if (state.sortKey === key) {
-    state.sortDir *= -1;
-  } else {
-    state.sortKey = key;
-    state.sortDir = 1;
-  }
+  state.sortKey = 'name';
+  state.sortDir = 1;
   document.querySelectorAll('thead th').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
   });
-  const thIdx = ['name','ownerName','checkedIn'].indexOf(key);
   const ths = document.querySelectorAll('thead th');
-  if (ths[thIdx]) {
-    ths[thIdx].classList.add(state.sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  if (ths[0]) {
+    ths[0].classList.add('sort-asc');
   }
   renderTable();
 }
