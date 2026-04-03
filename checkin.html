@@ -1,1 +1,1390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIP List — Check-In</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --bg: #0a0a0f;
+      --bg-card: #111118;
+      --bg-card-alt: #16161f;
+      --bg-input: #1a1a25;
+      --border: rgba(255,255,255,0.07);
+      --border-focus: rgba(139,92,246,0.5);
+      --text-primary: #f0eeff;
+      --text-secondary: rgba(240,238,255,0.55);
+      --text-muted: rgba(240,238,255,0.3);
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139,92,246,0.15);
+      --accent-bright: #a78bfa;
+      --success: #34d399;
+      --success-bg: rgba(52,211,153,0.1);
+      --danger: #f87171;
+      --danger-bg: rgba(248,113,113,0.1);
+      --warning: #fbbf24;
+      --gold: #e8c87a;
+      --gold-bg: rgba(232,200,122,0.1);
+      --font: 'DM Sans', sans-serif;
+      --mono: 'DM Mono', monospace;
+      --radius: 10px;
+      --radius-lg: 16px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
 
+    /* ─── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    button { font-family: var(--font); cursor: pointer; border: none; outline: none; }
+    input, select, textarea { font-family: var(--font); outline: none; }
+    a { color: var(--accent-bright); text-decoration: none; }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    .app-shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 16px 80px;
+    }
+
+    /* ─── Header ─────────────────────────────────────────────────── */
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+      color: var(--text-primary);
+    }
+    .logo-text span { color: var(--accent-bright); }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-family: var(--mono);
+      color: var(--text-muted);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+    }
+    .api-status-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background 0.3s;
+    }
+    .api-status-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .api-status-dot.error { background: var(--danger); }
+
+    /* ─── Sections ───────────────────────────────────────────────── */
+    .section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title .step-badge {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      border: 1px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+      color: var(--accent-bright);
+      font-weight: 600;
+    }
+
+    /* ─── Events Grid ─────────────────────────────────────────────── */
+    .events-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .event-card {
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+    .event-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), #6366f1);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .event-card:hover { border-color: rgba(139,92,246,0.3); }
+    .event-card:hover::before { opacity: 1; }
+    .event-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+    .event-card.selected::before { opacity: 1; }
+    .event-card-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .event-card-date {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .event-card-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--accent-bright);
+      background: var(--accent-glow);
+      border-radius: 20px;
+      padding: 2px 8px;
+    }
+
+    /* ─── Create New Event ───────────────────────────────────────── */
+    .create-event-form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ─── Inputs ─────────────────────────────────────────────────── */
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .input-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .input-field {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      font-size: 14px;
+      color: var(--text-primary);
+      transition: border-color 0.2s;
+      width: 100%;
+    }
+    .input-field::placeholder { color: var(--text-muted); }
+    .input-field:focus { border-color: var(--border-focus); }
+    .input-field.error { border-color: rgba(248,113,113,0.5); }
+
+    /* ─── Buttons ─────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 10px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s, background 0.15s;
+      white-space: nowrap;
+      font-family: var(--font);
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-bright); opacity: 1; }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-card-alt); opacity: 1; }
+    .btn-danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid rgba(248,113,113,0.2);
+    }
+    .btn-sm { padding: 7px 13px; font-size: 13px; }
+    .btn-xs { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+
+    /* ─── Owners Row ──────────────────────────────────────────────── */
+    .owners-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .owner-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px 6px 10px;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .owner-chip:hover { border-color: rgba(139,92,246,0.3); }
+    .owner-chip.selected {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+      color: var(--accent-bright);
+    }
+    .owner-chip-count {
+      font-size: 11px;
+      font-family: var(--mono);
+      opacity: 0.7;
+    }
+    .owner-chip-count.at-limit {
+      color: var(--danger);
+      opacity: 1;
+    }
+
+    /* ─── Add Owner Form ──────────────────────────────────────────── */
+    .add-owner-form {
+      display: flex;
+      gap: 10px;
+      padding: 14px;
+      background: var(--bg-card-alt);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    /* ─── Add Guest Form ──────────────────────────────────────────── */
+    .add-guest-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      padding: 18px;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .add-guest-form .form-actions {
+      display: flex;
+      align-items: flex-end;
+      padding-bottom: 1px;
+    }
+
+    /* ─── Stats Bar ───────────────────────────────────────────────── */
+    .stats-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+    .stat-chip-value {
+      font-weight: 600;
+      font-family: var(--mono);
+      font-size: 15px;
+    }
+    .stat-chip-label {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+    .stat-chip.success .stat-chip-value { color: var(--success); }
+    .stat-chip.accent .stat-chip-value { color: var(--accent-bright); }
+
+    /* ─── Search/Filter Bar ───────────────────────────────────────── */
+    .table-toolbar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      min-width: 200px;
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 14px 9px 36px;
+      font-size: 13px;
+      color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--text-muted); }
+    .search-input:focus { border-color: var(--border-focus); }
+
+    .filter-select {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .filter-select:focus { border-color: var(--border-focus); }
+
+    /* ─── Table ───────────────────────────────────────────────────── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: var(--bg-card-alt);
+      padding: 11px 14px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text-secondary); }
+    thead th.sort-asc::after { content: ' ↑'; }
+    thead th.sort-desc::after { content: ' ↓'; }
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    tbody tr.checked-in { background: rgba(52,211,153,0.04); }
+    tbody tr.checked-in:hover { background: rgba(52,211,153,0.07); }
+    td {
+      padding: 12px 14px;
+      color: var(--text-secondary);
+      vertical-align: middle;
+    }
+    td.guest-name {
+      font-weight: 500;
+      color: var(--text-primary);
+      min-width: 130px;
+    }
+
+    /* ─── Check-in Toggle ─────────────────────────────────────────── */
+    .checkin-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid;
+    }
+    .checkin-btn.not-checked {
+      background: transparent;
+      border-color: var(--border);
+      color: var(--text-muted);
+    }
+    .checkin-btn.not-checked:hover {
+      border-color: var(--success);
+      color: var(--success);
+      background: var(--success-bg);
+    }
+    .checkin-btn.checked {
+      background: var(--success-bg);
+      border-color: rgba(52,211,153,0.3);
+      color: var(--success);
+    }
+    .checkin-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+    .checkin-btn.checked .checkin-dot { background: var(--success); }
+    .checkin-btn.not-checked .checkin-dot { background: var(--text-muted); }
+
+    /* ─── Owner Badge ─────────────────────────────────────────────── */
+    .owner-badge {
+      display: inline-block;
+      padding: 3px 9px;
+      background: var(--accent-glow);
+      border: 1px solid rgba(139,92,246,0.2);
+      border-radius: 20px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--accent-bright);
+      white-space: nowrap;
+    }
+
+    /* ─── Empty State ─────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .empty-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ─── Loading Spinner ─────────────────────────────────────────── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Toast ───────────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 18px;
+      background: var(--bg-card-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow);
+      pointer-events: all;
+      animation: toastIn 0.3s ease;
+      max-width: 340px;
+    }
+    .toast.success { border-color: rgba(52,211,153,0.3); }
+    .toast.success .toast-dot { background: var(--success); }
+    .toast.error { border-color: rgba(248,113,113,0.3); }
+    .toast.error .toast-dot { background: var(--danger); }
+    .toast.info { border-color: rgba(139,92,246,0.3); }
+    .toast.info .toast-dot { background: var(--accent-bright); }
+    .toast-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Modal ───────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+      backdrop-filter: blur(4px);
+    }
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--shadow);
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-title {
+      font-size: 17px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+
+    /* ─── Progress Bar ────────────────────────────────────────────── */
+    .progress-bar-wrap {
+      background: var(--bg-input);
+      border-radius: 20px;
+      height: 4px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), #6366f1);
+      border-radius: 20px;
+      transition: width 0.4s ease;
+    }
+    .progress-bar-fill.danger { background: linear-gradient(90deg, var(--warning), var(--danger)); }
+
+    /* ─── App Lock ──────────────────────────────────────────────── */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(10px);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+    .auth-error {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--danger);
+    }
+
+    /* ─── Utilities ───────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+    .text-muted { color: var(--text-muted); font-size: 13px; }
+    .flex-center { display: flex; align-items: center; justify-content: center; }
+    .gap-2 { gap: 8px; }
+
+
+    /* ─── Check-In Only Mode ───────────────────────────────────── */
+    #create-event-toggle,
+    #create-event-form,
+    #section-owners,
+    #section-add-guest { display: none !important; }
+
+    /* ─── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .app-header { padding: 16px 0 20px; }
+      .section { padding: 18px 16px; }
+      .add-guest-form { grid-template-columns: 1fr; }
+      #toast-container { right: 12px; bottom: 12px; left: 12px; }
+      .toast { max-width: none; }
+      thead th:nth-child(4), td:nth-child(4),
+      thead th:nth-child(5), td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="logo" style="margin-bottom:18px;">
+      <div class="logo-icon">🔒</div>
+      <span class="logo-text">VIP <span>List</span></span>
+    </div>
+    <div class="auth-title">Check-In Access</div>
+    <div class="auth-subtitle">Enter the shared password to open the check-in page.</div>
+    <div class="input-group">
+      <label class="input-label">Password</label>
+      <input type="password" id="auth-password" class="input-field" placeholder="Enter password" onkeydown="if(event.key==='Enter')unlockApp()" />
+    </div>
+    <div class="modal-actions" style="margin-top:16px; justify-content:stretch;">
+      <button class="btn btn-primary" style="width:100%;" onclick="unlockApp()">Open App</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+  </div>
+</div>
+
+<div class="app-shell hidden" id="app-shell">
+
+  <!-- ── Header ── -->
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-icon">🎟</div>
+      <span class="logo-text">VIP <span>List</span></span>
+    </div>
+    <div class="header-right">
+      <div class="api-status" id="api-status">
+        <div class="api-status-dot" id="api-dot"></div>
+        <span id="api-status-text">Connecting...</span>
+      </div>
+    </div>
+  </header>
+
+
+
+  <!-- ── Step 1: Events ── -->
+  <div class="section" id="section-events">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-badge">1</div>
+        Events
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleCreateEvent()" id="create-event-toggle">
+        + New Event
+      </button>
+    </div>
+
+    <!-- Create event inline form -->
+    <div id="create-event-form" class="create-event-form hidden" style="margin-bottom:16px;">
+      <div class="input-group">
+        <label class="input-label">Event Name</label>
+        <input type="text" id="new-event-name" class="input-field" placeholder="e.g. Saturday Night at Venue X" onkeydown="if(event.key==='Enter')createNewEvent()" />
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px;">
+        <button class="btn btn-primary" id="create-event-btn" onclick="createNewEvent()">Create</button>
+        <button class="btn btn-ghost" onclick="toggleCreateEvent()">Cancel</button>
+      </div>
+    </div>
+
+    <div id="events-grid" class="events-grid">
+      <div class="empty-state">
+        <div class="empty-icon">🗓</div>
+        <div class="empty-title">No events yet</div>
+        <div class="empty-sub">No events are available yet</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Step 2: Check-In (shown after selecting event) ── -->
+  <div id="guest-management" class="hidden">
+
+    <!-- ── Step 2: Guest List Owners ── -->
+    <div class="section" id="section-owners">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="step-badge">2</div>
+          Check-In Owners
+          <span class="text-muted" id="owners-event-label"></span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="toggleAddOwner()">+ Add Owner</button>
+      </div>
+
+      <div id="add-owner-form" class="add-owner-form hidden" style="margin-bottom:16px;">
+        <div class="input-group" style="min-width:150px;">
+          <label class="input-label">Owner Name</label>
+          <input type="text" id="new-owner-name" class="input-field" placeholder="e.g. Rainn, VIP Host..." />
+        </div>
+        <div class="input-group" style="max-width:110px;">
+          <label class="input-label">Max Guests</label>
+          <input type="number" id="new-owner-limit" class="input-field" placeholder="∞" min="1" />
+        </div>
+        <div style="display:flex;align-items:flex-end;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="addOwner()">Add</button>
+          <button class="btn btn-ghost btn-sm" onclick="toggleAddOwner()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="owners-list" class="owners-list">
+        <span class="text-muted">Select an event first</span>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Add Guest ── -->
+    <div class="section" id="section-add-guest">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="step-badge">3</div>
+          Add Guest
+        </div>
+        <span id="owner-limit-display" class="text-muted"></span>
+      </div>
+
+      <div class="add-guest-form">
+        <div class="input-group">
+          <label class="input-label">Full Name *</label>
+          <input type="text" id="guest-name" class="input-field" placeholder="Guest name" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Email</label>
+          <input type="email" id="guest-email" class="input-field" placeholder="optional" />
+        </div>
+        <div class="input-group">
+          <label class="input-label">Phone</label>
+          <input type="tel" id="guest-phone" class="input-field" placeholder="optional" />
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="add-guest-btn" onclick="addGuest()" style="width:100%;">
+            Add to List
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Step 4: Guest List Table ── -->
+    <div class="section" id="section-guests">
+      <div class="section-header">
+        <div class="section-title">
+          <div class="step-badge">2</div>
+          Guest Check-In
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button class="btn btn-ghost btn-sm" onclick="refreshGuests()">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-bar" id="stats-bar"></div>
+
+      <!-- Toolbar -->
+      <div class="table-toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input type="text" class="search-input" id="search-input" placeholder="Search by name, owner, email, phone..." oninput="renderTable()" />
+        </div>
+        <select class="filter-select" id="filter-checkin" onchange="renderTable()">
+          <option value="all">All guests</option>
+          <option value="checked">Checked in</option>
+          <option value="not-checked">Not checked in</option>
+        </select>
+        <select class="filter-select" id="filter-owner" onchange="renderTable()">
+          <option value="all">All owners</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table id="guests-table">
+          <thead>
+            <tr>
+              <th onclick="sortBy('name')">Name</th>
+              <th onclick="sortBy('ownerName')">Owner</th>
+              <th onclick="sortBy('checkedIn')">Status</th>
+            </tr>
+          </thead>
+          <tbody id="guests-tbody">
+            <tr>
+              <td colspan="3">
+                <div class="empty-state">
+                  <div class="empty-icon">👥</div>
+                  <div class="empty-title">No guests yet</div>
+                  <div class="empty-sub">Select an event to begin check-in</div>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /guest-management -->
+
+</div><!-- /app-shell -->
+
+
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// GuestFlow — Check-In App
+// ═══════════════════════════════════════════════════════════
+
+// ── App Lock ─────────────────────────────────────────────
+const APP_PASSWORD = '123';
+const AUTH_STORAGE_KEY = 'vip-list-checkin-authenticated';
+
+// ── State ──────────────────────────────────────────────────
+const state = {
+  apiUrl: '',
+  events: [],
+  selectedEvent: null,
+  owners: [],
+  selectedOwner: null,
+  guests: [],
+  sortKey: 'name',
+  sortDir: 1,
+};
+
+// ── Hardcoded API URL ───────────────────────────────────────
+const API_URL = 'https://script.google.com/macros/s/AKfycbw3yuIKkV3M5H0MUTCjb7BVX0Ym32CvSuKOJf0VKFGXdSldTpXVZxwj_7hPjZOHUxAk/exec';
+
+// ── Init ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  state.apiUrl = API_URL;
+  initializeAppAccess();
+});
+
+// ── Access Control ───────────────────────────────────────
+function initializeAppAccess() {
+  const unlocked = localStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+  if (unlocked) {
+    showApp();
+    startApp();
+  } else {
+    showLockScreen();
+  }
+}
+
+function showLockScreen() {
+  document.getElementById('auth-overlay').classList.remove('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+  setTimeout(() => document.getElementById('auth-password')?.focus(), 50);
+}
+
+function showApp() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+}
+
+let appStarted = false;
+function startApp() {
+  if (appStarted) return;
+  appStarted = true;
+  testConnection().then(() => loadEvents());
+}
+
+function unlockApp() {
+  const input = document.getElementById('auth-password');
+  const error = document.getElementById('auth-error');
+  const entered = input.value;
+  input.classList.remove('error');
+  if (entered === APP_PASSWORD) {
+    localStorage.setItem(AUTH_STORAGE_KEY, 'true');
+    error.textContent = '';
+    input.value = '';
+    showApp();
+    startApp();
+    toast('Access granted', 'success');
+  } else {
+    error.textContent = 'Incorrect password.';
+    input.classList.add('error');
+    input.focus();
+    input.select();
+  }
+}
+
+// ── API Layer ──────────────────────────────────────────────
+// All calls use GET + URL params — Apps Script requires this for cross-origin
+// requests. iOS Safari blocks fetch POST without proper CORS headers, but
+// Apps Script GET requests work fine with redirect: follow.
+async function api(action, params = {}) {
+  const url = new URL(state.apiUrl);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, String(v)));
+  try {
+    const res = await fetch(url.toString(), { redirect: 'follow' });
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if (data.error) throw new Error(data.error);
+    return data;
+  } catch (e) {
+    console.error('API error:', e);
+    toast(`API error: ${e.message}`, 'error');
+    return null;
+  }
+}
+
+// Write operations also go via GET params — Apps Script doGet handles all actions.
+async function apiPost(action, body = {}) {
+  return api(action, body);
+}
+
+// ── Connection ─────────────────────────────────────────────
+async function testConnection() {
+  const dot = document.getElementById('api-dot');
+  const txt = document.getElementById('api-status-text');
+  dot.className = 'api-status-dot';
+  txt.textContent = 'Connecting...';
+  const res = await api('ping');
+  if (res && res.ok) {
+    dot.className = 'api-status-dot connected';
+    txt.textContent = 'Connected';
+  } else {
+    dot.className = 'api-status-dot error';
+    txt.textContent = 'Error';
+  }
+  return res && res.ok;
+}
+
+// ── Events ─────────────────────────────────────────────────
+async function loadEvents() {
+  const data = await api('getEvents');
+  if (!data) return;
+  state.events = data.events || [];
+  renderEvents();
+}
+
+function renderEvents() {
+  const grid = document.getElementById('events-grid');
+  if (!state.events.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🗓</div><div class="empty-title">No events yet</div><div class="empty-sub">No events are available yet</div></div>`;
+    return;
+  }
+  grid.innerHTML = state.events.map(ev => `
+    <div class="event-card ${state.selectedEvent?.eventId === ev.eventId ? 'selected' : ''}" onclick="selectEvent('${ev.eventId}')">
+      <div class="event-card-name" title="${esc(ev.eventName)}">${esc(ev.eventName)}</div>
+      <div class="event-card-date">${formatDate(ev.createdDate)}</div>
+      <div class="event-card-count">👥 ${ev.guestCount ?? 0} guests</div>
+    </div>
+  `).join('');
+}
+
+function toggleCreateEvent() {
+  const form = document.getElementById('create-event-form');
+  form.classList.toggle('hidden');
+  if (!form.classList.contains('hidden')) {
+    document.getElementById('new-event-name').focus();
+  }
+}
+
+async function createNewEvent() {
+  const name = document.getElementById('new-event-name').value.trim();
+  if (!name) { toast('Event name is required', 'error'); return; }
+  const btn = document.getElementById('create-event-btn');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+  try {
+    const data = await apiPost('createEvent', { eventName: name });
+    if (data && data.ok) {
+      toast(`Event "${name}" created!`, 'success');
+      document.getElementById('new-event-name').value = '';
+      document.getElementById('create-event-form').classList.add('hidden');
+      await loadEvents();
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+async function selectEvent(eventId) {
+  state.selectedEvent = state.events.find(e => e.eventId === eventId);
+  state.selectedOwner = null;
+  state.guests = [];
+  renderEvents();
+  document.getElementById('guest-management').classList.remove('hidden');
+  document.getElementById('owners-event-label').textContent = `— ${state.selectedEvent.eventName}`;
+  document.getElementById('filter-owner').innerHTML = '<option value="all">All owners</option>';
+  await loadOwners();
+  await loadGuests();
+}
+
+// ── Owners ─────────────────────────────────────────────────
+async function loadOwners() {
+  const data = await api('getOwners', { eventId: state.selectedEvent.eventId });
+  if (!data) return;
+  state.owners = data.owners || [];
+  renderOwners();
+  updateOwnerFilter();
+}
+
+function renderOwners() {
+  const wrap = document.getElementById('owners-list');
+  if (!state.owners.length) {
+    wrap.innerHTML = `<span class="text-muted">No owners yet — add one above</span>`;
+    return;
+  }
+  wrap.innerHTML = state.owners.map(o => {
+    const count = state.guests.filter(g => g.ownerId === o.ownerId).length;
+    const hasLimit = o.guestLimit > 0;
+    const atLimit = hasLimit && count >= o.guestLimit;
+    const isSelected = state.selectedOwner?.ownerId === o.ownerId;
+    return `
+      <div class="owner-chip ${isSelected ? 'selected' : ''}" onclick="selectOwner('${o.ownerId}')">
+        ${esc(o.ownerName)}
+        <span class="owner-chip-count ${atLimit ? 'at-limit' : ''}">
+          ${count}${hasLimit ? '/' + o.guestLimit : ''}
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+function selectOwner(ownerId) {
+  state.selectedOwner = state.owners.find(o => o.ownerId === ownerId);
+  renderOwners();
+  updateLimitDisplay();
+}
+
+function updateLimitDisplay() {
+  const el = document.getElementById('owner-limit-display');
+  if (!state.selectedOwner) { el.textContent = ''; return; }
+  const o = state.selectedOwner;
+  const count = state.guests.filter(g => g.ownerId === o.ownerId).length;
+  if (o.guestLimit > 0) {
+    const pct = Math.min(100, Math.round((count / o.guestLimit) * 100));
+    el.textContent = `${count} / ${o.guestLimit} guests`;
+    const btn = document.getElementById('add-guest-btn');
+    if (count >= o.guestLimit) {
+      btn.disabled = true;
+      btn.textContent = 'List Full';
+      el.style.color = 'var(--danger)';
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Add to List';
+      el.style.color = 'var(--text-muted)';
+    }
+  } else {
+    el.textContent = '';
+    document.getElementById('add-guest-btn').disabled = false;
+    document.getElementById('add-guest-btn').textContent = 'Add to List';
+  }
+}
+
+function toggleAddOwner() {
+  document.getElementById('add-owner-form').classList.toggle('hidden');
+  if (!document.getElementById('add-owner-form').classList.contains('hidden')) {
+    document.getElementById('new-owner-name').focus();
+  }
+}
+
+async function addOwner() {
+  if (!state.selectedEvent) { toast('Select an event first', 'error'); return; }
+  const name = document.getElementById('new-owner-name').value.trim();
+  const limit = parseInt(document.getElementById('new-owner-limit').value) || 0;
+  if (!name) { toast('Owner name is required', 'error'); return; }
+  const data = await apiPost('addOwner', {
+    eventId: state.selectedEvent.eventId,
+    ownerName: name,
+    guestLimit: limit,
+  });
+  if (data) {
+    toast(`Owner "${name}" added`, 'success');
+    document.getElementById('new-owner-name').value = '';
+    document.getElementById('new-owner-limit').value = '';
+    document.getElementById('add-owner-form').classList.add('hidden');
+    await loadOwners();
+    updateOwnerFilter();
+  }
+}
+
+// ── Guests ─────────────────────────────────────────────────
+async function loadGuests() {
+  if (!state.selectedEvent) return;
+  const data = await api('getGuests', { eventId: state.selectedEvent.eventId });
+  if (!data) return;
+  state.guests = data.guests || [];
+  renderOwners();
+  renderTable();
+  renderStats();
+  updateLimitDisplay();
+}
+
+async function addGuest() {
+  if (!state.selectedOwner) { toast('Please select a guest list owner first', 'error'); return; }
+  const name = document.getElementById('guest-name').value.trim();
+  if (!name) { toast('Guest name is required', 'error'); return; }
+  const email = document.getElementById('guest-email').value.trim();
+  const phone = document.getElementById('guest-phone').value.trim();
+
+  // Client-side limit check
+  if (state.selectedOwner.guestLimit > 0) {
+    const count = state.guests.filter(g => g.ownerId === state.selectedOwner.ownerId).length;
+    if (count >= state.selectedOwner.guestLimit) {
+      toast(`Guest list for ${state.selectedOwner.ownerName} is full`, 'error');
+      return;
+    }
+  }
+
+  const btn = document.getElementById('add-guest-btn');
+  setLoading(btn, true);
+  const data = await apiPost('addGuest', {
+    eventId: state.selectedEvent.eventId,
+    ownerId: state.selectedOwner.ownerId,
+    name, email, phone,
+  });
+  setLoading(btn, false);
+  if (data) {
+    toast(`${name} added to the list!`, 'success');
+    document.getElementById('guest-name').value = '';
+    document.getElementById('guest-email').value = '';
+    document.getElementById('guest-phone').value = '';
+    await loadGuests();
+    // Update event guest count
+    const ev = state.events.find(e => e.eventId === state.selectedEvent.eventId);
+    if (ev) ev.guestCount = (ev.guestCount || 0) + 1;
+    renderEvents();
+  }
+}
+
+async function toggleCheckIn(guestId, currentStatus) {
+  const newStatus = !currentStatus;
+  const data = await apiPost('updateCheckIn', { guestId, checkedIn: newStatus });
+  if (data) {
+    const g = state.guests.find(g => g.guestId === guestId);
+    if (g) g.checkedIn = newStatus;
+    renderTable();
+    renderStats();
+    toast(newStatus ? '✓ Checked in!' : 'Check-in removed', newStatus ? 'success' : 'info');
+  }
+}
+
+async function refreshGuests() {
+  toast('Refreshing...', 'info');
+  await loadGuests();
+}
+
+// ── Table Rendering ─────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('guests-tbody');
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const filterCI = document.getElementById('filter-checkin').value;
+  const filterOwner = document.getElementById('filter-owner').value;
+
+  let guests = [...state.guests];
+
+  // Search
+  if (search) {
+    guests = guests.filter(g =>
+      g.name.toLowerCase().includes(search) ||
+      (g.email || '').toLowerCase().includes(search) ||
+      (g.phone || '').toLowerCase().includes(search)
+    );
+  }
+
+  // Filter check-in
+  if (filterCI === 'checked') guests = guests.filter(g => g.checkedIn);
+  if (filterCI === 'not-checked') guests = guests.filter(g => !g.checkedIn);
+
+  // Filter owner
+  if (filterOwner !== 'all') guests = guests.filter(g => g.ownerId === filterOwner);
+
+  // Sort
+  guests.sort((a, b) => {
+    let va = a[state.sortKey] ?? '';
+    let vb = b[state.sortKey] ?? '';
+    if (typeof va === 'boolean') { va = va ? 1 : 0; vb = vb ? 1 : 0; }
+    if (va < vb) return -1 * state.sortDir;
+    if (va > vb) return 1 * state.sortDir;
+    return 0;
+  });
+
+  if (!guests.length) {
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No guests found</div><div class="empty-sub">Try adjusting your search or filters</div></div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = guests.map(g => `
+    <tr class="${g.checkedIn ? 'checked-in' : ''}">
+      <td class="guest-name">${esc(g.name)}</td>
+      <td><span class="owner-badge">${esc(g.ownerName || '—')}</span></td>
+      <td>
+        <button class="checkin-btn ${g.checkedIn ? 'checked' : 'not-checked'}" onclick="toggleCheckIn('${g.guestId}', ${g.checkedIn})">
+          <span class="checkin-dot"></span>
+          ${g.checkedIn ? 'Checked In' : 'Not In'}
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function sortBy(key) {
+  if (state.sortKey === key) {
+    state.sortDir *= -1;
+  } else {
+    state.sortKey = key;
+    state.sortDir = 1;
+  }
+  document.querySelectorAll('thead th').forEach(th => {
+    th.classList.remove('sort-asc', 'sort-desc');
+  });
+  const thIdx = ['name','ownerName','checkedIn'].indexOf(key);
+  const ths = document.querySelectorAll('thead th');
+  if (ths[thIdx]) {
+    ths[thIdx].classList.add(state.sortDir === 1 ? 'sort-asc' : 'sort-desc');
+  }
+  renderTable();
+}
+
+// ── Stats ─────────────────────────────────────────────────
+function renderStats() {
+  const bar = document.getElementById('stats-bar');
+  const total = state.guests.length;
+  const checkedIn = state.guests.filter(g => g.checkedIn).length;
+  const pct = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
+  bar.innerHTML = `
+    <div class="stat-chip accent">
+      <span class="stat-chip-value">${total}</span>
+      <span class="stat-chip-label">Total Guests</span>
+    </div>
+    <div class="stat-chip success">
+      <span class="stat-chip-value">${checkedIn}</span>
+      <span class="stat-chip-label">Checked In</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-value">${total - checkedIn}</span>
+      <span class="stat-chip-label">Pending</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-chip-value">${pct}%</span>
+      <span class="stat-chip-label">Arrival Rate</span>
+    </div>
+  `;
+}
+
+// ── Owner Filter ──────────────────────────────────────────
+function updateOwnerFilter() {
+  const sel = document.getElementById('filter-owner');
+  sel.innerHTML = '<option value="all">All owners</option>' +
+    state.owners.map(o => `<option value="${o.ownerId}">${esc(o.ownerName)}</option>`).join('');
+}
+
+// ── Utilities ──────────────────────────────────────────────
+function esc(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function formatDate(str) {
+  if (!str) return '';
+  try {
+    return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  } catch { return str; }
+}
+
+function setLoading(btn, loading) {
+  if (loading) {
+    btn.dataset.orig = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner"></span>';
+    btn.disabled = true;
+  } else {
+    btn.innerHTML = btn.dataset.orig || btn.innerHTML;
+    btn.disabled = false;
+  }
+}
+
+function toast(msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<div class="toast-dot"></div><span>${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s';
+    setTimeout(() => el.remove(), 300);
+  }, 3200);
+}
+</script>
+</body>
+</html>
