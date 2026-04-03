@@ -635,6 +635,44 @@
     }
     .progress-bar-fill.danger { background: linear-gradient(90deg, var(--warning), var(--danger)); }
 
+    /* ─── App Lock ──────────────────────────────────────────────── */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(0,0,0,0.82);
+      backdrop-filter: blur(10px);
+    }
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 28px;
+    }
+    .auth-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .auth-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+    }
+    .auth-error {
+      min-height: 18px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--danger);
+    }
+
     /* ─── Utilities ───────────────────────────────────────────────── */
     .hidden { display: none !important; }
     .divider {
@@ -662,7 +700,26 @@
 
 <div id="toast-container"></div>
 
-<div class="app-shell">
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-card">
+    <div class="logo" style="margin-bottom:18px;">
+      <div class="logo-icon">🔒</div>
+      <span class="logo-text">VIP <span>List</span></span>
+    </div>
+    <div class="auth-title">Protected Access</div>
+    <div class="auth-subtitle">Enter the shared password to open the guest list app.</div>
+    <div class="input-group">
+      <label class="input-label">Password</label>
+      <input type="password" id="auth-password" class="input-field" placeholder="Enter password" onkeydown="if(event.key==='Enter')unlockApp()" />
+    </div>
+    <div class="modal-actions" style="margin-top:16px; justify-content:stretch;">
+      <button class="btn btn-primary" style="width:100%;" onclick="unlockApp()">Open App</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+  </div>
+</div>
+
+<div class="app-shell hidden" id="app-shell">
 
   <!-- ── Header ── -->
   <header class="app-header">
@@ -797,7 +854,7 @@
       <div class="table-toolbar">
         <div class="search-wrap">
           <span class="search-icon">⌕</span>
-          <input type="text" class="search-input" id="search-input" placeholder="Search by name, email, phone..." oninput="renderTable()" />
+          <input type="text" class="search-input" id="search-input" placeholder="Search by name, owner, email, phone..." oninput="renderTable()" />
         </div>
         <select class="filter-select" id="filter-checkin" onchange="renderTable()">
           <option value="all">All guests</option>
@@ -815,15 +872,13 @@
           <thead>
             <tr>
               <th onclick="sortBy('name')">Name</th>
-              <th onclick="sortBy('email')">Email</th>
-              <th onclick="sortBy('phone')">Phone</th>
               <th onclick="sortBy('ownerName')">Owner</th>
               <th onclick="sortBy('checkedIn')">Status</th>
             </tr>
           </thead>
           <tbody id="guests-tbody">
             <tr>
-              <td colspan="5">
+              <td colspan="3">
                 <div class="empty-state">
                   <div class="empty-icon">👥</div>
                   <div class="empty-title">No guests yet</div>
@@ -847,6 +902,10 @@
 // GuestFlow — Frontend App
 // ═══════════════════════════════════════════════════════════
 
+// ── App Lock ─────────────────────────────────────────────
+const APP_PASSWORD = 'Ice-haus-events-1!';
+const AUTH_STORAGE_KEY = 'vip-list-authenticated';
+
 // ── State ──────────────────────────────────────────────────
 const state = {
   apiUrl: '',
@@ -865,8 +924,57 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbw3yuIKkV3M5H0MUTCjb7BV
 // ── Init ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   state.apiUrl = API_URL;
-  testConnection().then(() => loadEvents());
+  initializeAppAccess();
 });
+
+// ── Access Control ───────────────────────────────────────
+function initializeAppAccess() {
+  const unlocked = localStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+  if (unlocked) {
+    showApp();
+    startApp();
+  } else {
+    showLockScreen();
+  }
+}
+
+function showLockScreen() {
+  document.getElementById('auth-overlay').classList.remove('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+  setTimeout(() => document.getElementById('auth-password')?.focus(), 50);
+}
+
+function showApp() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+  document.getElementById('app-shell').classList.remove('hidden');
+}
+
+let appStarted = false;
+function startApp() {
+  if (appStarted) return;
+  appStarted = true;
+  testConnection().then(() => loadEvents());
+}
+
+function unlockApp() {
+  const input = document.getElementById('auth-password');
+  const error = document.getElementById('auth-error');
+  const entered = input.value;
+  input.classList.remove('error');
+  if (entered === APP_PASSWORD) {
+    localStorage.setItem(AUTH_STORAGE_KEY, 'true');
+    error.textContent = '';
+    input.value = '';
+    showApp();
+    startApp();
+    toast('Access granted', 'success');
+  } else {
+    error.textContent = 'Incorrect password.';
+    input.classList.add('error');
+    input.focus();
+    input.select();
+  }
+}
 
 // ── API Layer ──────────────────────────────────────────────
 // All calls use GET + URL params — Apps Script requires this for cross-origin
@@ -1166,15 +1274,13 @@ function renderTable() {
   });
 
   if (!guests.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No guests found</div><div class="empty-sub">Try adjusting your search or filters</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No guests found</div><div class="empty-sub">Try adjusting your search or filters</div></div></td></tr>`;
     return;
   }
 
   tbody.innerHTML = guests.map(g => `
     <tr class="${g.checkedIn ? 'checked-in' : ''}">
       <td class="guest-name">${esc(g.name)}</td>
-      <td>${g.email ? esc(g.email) : '<span class="text-muted">—</span>'}</td>
-      <td>${g.phone ? esc(g.phone) : '<span class="text-muted">—</span>'}</td>
       <td><span class="owner-badge">${esc(g.ownerName || '—')}</span></td>
       <td>
         <button class="checkin-btn ${g.checkedIn ? 'checked' : 'not-checked'}" onclick="toggleCheckIn('${g.guestId}', ${g.checkedIn})">
@@ -1196,7 +1302,7 @@ function sortBy(key) {
   document.querySelectorAll('thead th').forEach(th => {
     th.classList.remove('sort-asc', 'sort-desc');
   });
-  const thIdx = ['name','email','phone','ownerName','checkedIn'].indexOf(key);
+  const thIdx = ['name','ownerName','checkedIn'].indexOf(key);
   const ths = document.querySelectorAll('thead th');
   if (ths[thIdx]) {
     ths[thIdx].classList.add(state.sortDir === 1 ? 'sort-asc' : 'sort-desc');
